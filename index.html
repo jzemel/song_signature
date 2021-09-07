@@ -1,7 +1,24 @@
 <meta charset="utf8" />
 <html>
 	<script>
-		
+		let myPromise = new Promise(function(myResolve, myReject) {
+			let req = new XMLHttpRequest();
+			req.open('GET', "https://jzemel.github.io/song_signature/song_performances.db");
+			req.onload = function() {
+				if (req.status == 200) {
+					console.log("200");
+				  myResolve(req.response);
+				} else {
+				  myReject("File not Found");
+				}
+			};
+			req.send();
+		});
+
+		myPromise.then(
+		  function(value) {console.log("callback");},
+		  function(error) {console.log(error);}
+		);
 	</script>
   	<body>
 		<h1>Test Page</h1>
