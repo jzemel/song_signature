@@ -1,12 +1,13 @@
 <meta charset="utf8" />
 <html>
 	<script>
+		var data;
 		let myPromise = new Promise(function(myResolve, myReject) {
 			let req = new XMLHttpRequest();
 			req.open('GET', "https://jzemel.github.io/song_signature/data.json");
 			req.onload = function() {
 				if (req.status == 200) {
-				  myResolve("file WAS found");
+				  myResolve(req.response);
 				} else {
 				  myReject("File not Found");
 				}
@@ -15,7 +16,10 @@
 		});
 
 		myPromise.then(
-		  function(value) {console.log(value);},
+		  function(value) {
+		  	data = value;
+		  	console.log("file WAS found");
+		  },
 		  function(error) {console.log(error);}
 		);
 	</script>
