@@ -6,7 +6,7 @@
 			req.open('GET', "https://jzemel.github.io/song_signature/data.json");
 			req.onload = function() {
 				if (req.status == 200) {
-				  myResolve(req.response);
+				  myResolve("file WAS found");
 				} else {
 				  myReject("File not Found");
 				}
