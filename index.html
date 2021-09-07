@@ -6,7 +6,6 @@
 			req.open('GET', "https://jzemel.github.io/song_signature/song_performances.db");
 			req.onload = function() {
 				if (req.status == 200) {
-					console.log("200");
 				  myResolve(req.response);
 				} else {
 				  myReject("File not Found");
@@ -16,7 +15,7 @@
 		});
 
 		myPromise.then(
-		  function(value) {console.log("callback");},
+		  function(value) {console.log(value);},
 		  function(error) {console.log(error);}
 		);
 	</script>
