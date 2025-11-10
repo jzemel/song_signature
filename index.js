@@ -1,19 +1,29 @@
-SHOWS_URL = "https://jzemel.github.io/song_signature/shows.json";
-
 let selectedData;
 let allTracks;
 
 // LAYOUT PARAMETERS
 
+const USE_LOCAL_DATA = false;
+const SHOWS_URL = USE_LOCAL_DATA 
+    ? "shows_test.json" 
+    : "https://jzemel.github.io/song_signature/shows.json";
+
 const CHART_WIDTH = 4200;
 const CHART_HEIGHT = 10000;
-const YEAR_OFFSET = 280;
-const MIN_SHOW_WIDTH = 16;
-const MARGINS = {top:20, bottom:10, left:6};
-const SET_OFFSET = 110;
-const GAP_WIDE = 16;
-const VERT_FACTOR = 1.2;
+//const MIN_SHOW_WIDTH = 50;
+const MARGINS = {top:50, bottom:10, left:80};
+const PX_PER_MIN =2;
+const BAR_WIDTH = 20;
+const GAP_WIDTH = 13;
+const SET_HEIGHT_MINUTES = 105;
+const E_HEIGHT_MINUTES = 35;
+const YEAR_HEIGHT = 2 * SET_HEIGHT_MINUTES + E_HEIGHT_MINUTES + 20;
 
+//const GAP_WIDE = 30;
+//const VERT_FACTOR = 1.2; //positining factor
+//const SONG_HEIGHT_FACTOR = 1;
+//const SET_OFFSET = 72 * SONG_HEIGHT_FACTOR;
+//const YEAR_OFFSET = 190 * SONG_HEIGHT_FACTOR;
 
 const DEFAULT_COLOR = "orange";
 const SELECTED_COLOR = "green";
@@ -24,16 +34,15 @@ const colorAge = d3.scaleSequential([-5,20], d3.interpolateOranges).unknown("pur
 //const colorDaysSincePlayed = d3.scaleSequential([-100,1200], d3.interpolateYlOrRd).unknown("purple");
 
 const x = d3.scaleLinear().range([0, CHART_WIDTH]);
-const y = d3.scaleLinear().range([YEAR_OFFSET,0]);
+//const y = d3.scaleLinear().range([YEAR_HEIGHT*PX_PER_MIN,0]);
 
 x.domain([0,140]);
-y.domain([0,180]);
+//y.domain([0,180]);
 
 // OTHER PARAMETERS
 let SONG_INDEX = {};
 const SHOW_SETS = ["1","2","3","E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
 const YEARS = [2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
-
 
 
 
@@ -88,7 +97,8 @@ function unpackShows(shows) {
     
     selectedData = allTracks;
 
-    SHOW_WIDTH = Math.max(MIN_SHOW_WIDTH, CHART_WIDTH/maxShows);
+    //SHOW_WIDTH = Math.max(MIN_SHOW_WIDTH, CHART_WIDTH/maxShows);
+    //SHOW_WIDTH = MIN_SHOW_WIDTH
     //todo geometry not yet figured out
     renderChart();
 }
@@ -103,10 +113,13 @@ function renderChart() {
         .attr('class', (data) => stripForHTML(data.song_name))
         .classed('bar',true)
         .attr('id', (data) => "s" + data.track_id)
-        .attr('width', SHOW_WIDTH - GAP_WIDE)
-        .attr('height', data => YEAR_OFFSET - y(data.duration))
-        .attr('x', data => x(data.show_position) + MARGINS.left)
-        .attr('y', data => ((YEARS.indexOf(data.year))*YEAR_OFFSET + (parseInt(data.set)-1) * SET_OFFSET + data.start_time)*VERT_FACTOR + MARGINS.top)
+        .attr('width', BAR_WIDTH)
+        //.attr('height', data => y(data.duration) * PX_PER_MIN)
+        //.attr('duration', data => y(data.duration))
+        .attr('height', data => data.duration * PX_PER_MIN)
+        .attr('duration', data => data.duration)
+        .attr('x', data => x(data.show_position) + MARGINS.left) // maybe change to calendar position?
+        .attr('y', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT + (parseInt(data.set)-1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top)
         .style("fill", data => colorFunction(data));
 
     chart.selectAll('.bar').data(selectedData, data => data.track_id).exit().remove();
@@ -120,18 +133,24 @@ function renderChart() {
             TOOLTIP.html(i.datestr+" "+i.venue+'<p>'+
                 i.song_name + "<p>" +
                 'length: ' + Math.round(i.duration) + " min<p>" +
+                'Shows since played: ' + i.shows_since_played +"<p>" +
                 '1st time played: ' + i.first_date_played);
             //console.log(d);
         })
         .on('mouseout',function(d,i){
             songName = d3.select(this).attr("name");
             unHighlight(songName);
-            TOOLTIP.transition().duration(0.5).style('opacity',0);
+            // Only hide tooltip if not selected
+            if (!d3.select(this).classed('selected')) {
+                TOOLTIP.transition().duration(0.5).style('opacity',0);
+            }
         })
-        .on('click', function(d,i) {
+        .on('click', function(event, i) {
             songName = d3.select(this).attr("name");
             toggleSelect(songName);
-            //console.log(i);
+            
+            // Stop event from bubbling to body
+            event.stopPropagation();
         })
         .on('dblclick', function(d,i) {
             trackID = d3.select(this).attr("id").replace(/^\w/g,"");
@@ -143,6 +162,25 @@ function renderChart() {
             renderChart();
         });
 
+        // Click anywhere to hide tooltip (only if nothing is hovered)
+        d3.select('body').on('click', function() {
+            TOOLTIP.transition().duration(200).style('opacity',0);
+        });
+
+        // Add year divider lines
+        chart.selectAll('.year-divider')
+            .data(YEARS)
+            .enter()
+            .append('line')
+            .classed('year-divider', true)
+            .attr('x1', MARGINS.left - 10)
+            .attr('x2', CHART_WIDTH)
+            .attr('y1', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + MARGINS.top - 15)
+            .attr('y2', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + MARGINS.top - 15)
+            .style('stroke', '#cccccc')
+            .style('stroke-width', 1)
+            .style('opacity', 0.6);
+
         var labels = chart.selectAll('.label')
             .data(YEARS)
             .enter()
@@ -152,16 +190,31 @@ function renderChart() {
             .append('text')
             .classed('year-label', true)
             .text((data) => data)
-            .attr('x', 2)
-            .attr('y', data => ((YEARS.indexOf(data))*YEAR_OFFSET)*VERT_FACTOR + 12);
+            .attr('x', MARGINS.left - 15)
+            .attr('y', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + 20)
+            .style('font-family', 'sans-serif')
+            .style('font-size', '18px')
+            .style('font-weight', 'bold')
+            .style('fill', '#333')
+            .style('text-anchor', 'end');
         
-        labels
+        // Create set labels for each year
+        var setLabels = chart.selectAll('.set-label-group')
+            .data(YEARS.flatMap(year => 
+                [{'year': year, 'num': 1, 'text': "SET 1"},
+                 {'year': year, 'num': 2, 'text': "SET 2"}, 
+                 {'year': year, 'num': 3, 'text': "E"}]))
+            .enter()
             .append('text')
-            .data([{'num': 1, 'text': "SET 1"},{'num': 2, 'text': "SET 2"}, {'num': 3, 'text': "E"}])
             .classed('set-label', true)
             .text(data => data.text)
-            .attr('x', 2)
-            .attr('y', data => ((data.num-1)*SET_OFFSET*VERT_FACTOR + MARGINS.top+6));
+            .attr('x', MARGINS.left - 15)
+            .attr('y', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT*PX_PER_MIN + (data.num-1)*SET_HEIGHT_MINUTES * PX_PER_MIN) + MARGINS.top + 10)
+            .style('font-family', 'sans-serif')
+            .style('font-size', '11px')
+            .style('font-weight', 'bold')
+            .style('fill', '#666')
+            .style('text-anchor', 'end');
 }
 
 function filterTo(songIDs) {
@@ -217,7 +270,13 @@ d3.select("#selectButton").on("change",function(d) {
     });
 
 function highlight(className) {
-    d3.selectAll("."+className).transition().duration('50').attr('opacity','.5');
+    d3.selectAll("."+className)
+        .transition()
+        .duration('50')
+        .style('fill', function() {
+            const currentColor = d3.select(this).style('fill');
+            return d3.color(currentColor).brighter(0.7);
+        }); // brighten color
 }
 
 function toggleSelect(className) {
@@ -230,8 +289,19 @@ function toggleSelect(className) {
 }
 
 function unHighlight(className) {
-    d3.selectAll("."+className).transition().duration('50').attr('opacity','1');
-} //replace color with function that changes with select
+    d3.selectAll("."+className)
+        .transition()
+        .duration('50')
+        .style('fill', function(data) {
+            // Check if this element is selected
+            const isSelected = d3.select(this).classed('selected');
+            if (isSelected) {
+                return SELECTED_COLOR; // Keep it green if selected
+            } else {
+                return colorFunction(data); // Otherwise restore original
+            }
+        }); // restore original color
+}
 
 function stripForHTML(string) {
     return string.replace(/[.,?\/#!$%\^&\*;:{}=>_\'`~()]/g,"").replace(/ /g,"-").replace(/^\d/g,"z");
@@ -241,4 +311,3 @@ function Age(track){
     let age_ms = (Date.now() - new Date(track.first_date_played));
     return age_ms/(1000*60*60*24*365); 
 }
-

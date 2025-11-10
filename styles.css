@@ -1,0 +1,78 @@
+.bar {
+    stroke-width: 3;
+    stroke: white;
+}
+
+.tooltip-donut {
+    position: absolute;
+    text-align: left;
+    padding: 1rem 1.25rem;
+    background: rgba(30, 30, 40, 0.95);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    pointer-events: none;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    max-width: 320px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.tooltip-donut p {
+    margin: 0.4rem 0;
+}
+
+.tooltip-donut p:first-child {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fbbf24;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-donut p:nth-child(2) {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #60a5fa;
+    margin-bottom: 0.5rem;
+}
+
+.tooltip-donut p:last-child {
+    font-size: 0.85rem;
+    color: #d1d5db;
+    margin-top: 0.5rem;
+}
+
+.year-label {
+    font-family: sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 20px;
+}
+
+.set-label {
+    font-family: sans-serif;
+    font-size: 10px;
+    font-weight: bold;
+    fill: #333333;
+    margin-left: 20px;
+}
+
+select,
+text,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: #333;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+    font-family: sans-serif;
+}
