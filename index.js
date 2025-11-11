@@ -27,8 +27,8 @@ const MISSING_DURATION = 8.5; // minutes
 const colorOptions = ["None", "Shows Since Played","Song Age"]; //"Days Since Played" not as interesting as shows
 let colorFunction = function() { return DEFAULT_COLOR }; //global variable holding bar coloring function
 const colorShowsSincePlayed = d3.scaleSequential()
-    .domain([0, 80])
-    .interpolator(d3.interpolateYlOrRd)
+    .domain([-20, 80])  // 0 = recently played, 80 = rarely played
+    .interpolator(d3.interpolateYlGnBu)
     .unknown("#e9ecef");
 const colorAge = d3.scaleSequential()
     .domain([0, 20])
@@ -55,7 +55,14 @@ const chartContainer = d3
 const chart = chartContainer.append('g'); //group of chart elements
 
 var TOOLTIP = d3.select(".tooltip-donut")
-     .style("opacity", 0);
+     .style("opacity", 0)
+     .on('click', function(event) {
+         // Stop propagation so clicking tooltip doesn't hide it
+         event.stopPropagation();
+     });
+
+// Track if tooltip is pinned to a selected bar
+var pinnedTooltip = null;
 
 const showPromise = fetch(SHOWS_URL)
   .then(
@@ -145,29 +152,70 @@ function renderChart() {
 
     chart.selectAll('.bar')
         .on('mouseover',function(d,i){
+            // If tooltip is pinned to a selected bar, don't update it on hover
+            if (pinnedTooltip !== null) {
+                return;
+            }
+
             songName = d3.select(this).attr("name");
             highlight(songName);
             TOOLTIP.transition().duration(0.5).style('opacity','1');
             TOOLTIP.style("left", d.pageX+"px").style("top", d.pageY+"px");
-            TOOLTIP.html(i.datestr+" "+i.venue+'<p>'+
-                i.song_name + "<p>" +
-                'length: ' + Math.round(i.duration) + " min<p>" +
-                'Shows since played: ' + i.shows_since_played +"<p>" +
-                '1st time played: ' + i.first_date_played);
+
+            // Build tooltip content
+            let tooltipContent = '';
+
+            // Album cover if available
+            if (i.album_cover_url) {
+                tooltipContent += `<img src="${i.album_cover_url}" class="tooltip-album-cover">`;
+            }
+
+            tooltipContent += `<p>${i.datestr} ${i.venue}</p>` +
+                `<p class="tooltip-song-name">${i.song_name}</p>` +
+                `<p>Length: ${Math.round(i.duration)} min</p>` +
+                `<p>Shows since played: ${i.shows_since_played}</p>` +
+                `<p>1st time played: ${i.first_date_played}</p>`;
+
+            // Slugify song name for phish.in URL
+            const songSlug = i.song_name.toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-');
+            const phishinUrl = `https://phish.in/${i.datestr}/${songSlug}`;
+
+            // Play Track URL (phish.in)
+            tooltipContent += `<p class="tooltip-play">Play Track: <a href="${phishinUrl}" target="_blank">Listen</a></p>`;
+
+            // MP3 Download URL if available
+            if (i.mp3_url) {
+                tooltipContent += `<p class="tooltip-mp3">Download Track: <a href="${i.mp3_url}" target="_blank">Download</a></p>`;
+            }
+
+            TOOLTIP.html(tooltipContent);
             //console.log(d);
         })
         .on('mouseout',function(d,i){
             songName = d3.select(this).attr("name");
             unHighlight(songName);
-            // Only hide tooltip if not selected
-            if (!d3.select(this).classed('selected')) {
-                TOOLTIP.transition().duration(0.5).style('opacity',0);
+            // Only hide tooltip if this bar is not selected AND tooltip is not pinned
+            if (!d3.select(this).classed('selected') && pinnedTooltip === null) {
+                TOOLTIP.transition().duration(200).style('opacity',0);
             }
         })
         .on('click', function(event, i) {
             songName = d3.select(this).attr("name");
-            toggleSelect(songName);
-            
+
+            // If clicking an already selected bar, deselect it and hide tooltip
+            if (d3.select(this).classed('selected')) {
+                toggleSelect(songName);
+                TOOLTIP.transition().duration(200).style('opacity',0);
+                pinnedTooltip = null; // Unpin tooltip
+            } else {
+                // Otherwise select it and keep tooltip visible (pin it)
+                toggleSelect(songName);
+                pinnedTooltip = i.track_id; // Pin tooltip to this track
+            }
+
             // Stop event from bubbling to body
             event.stopPropagation();
         })
@@ -181,9 +229,19 @@ function renderChart() {
             renderChart();
         });
 
-    // Click anywhere to hide tooltip (only if nothing is hovered)
+    // Click anywhere to hide tooltip and deselect all bars
     d3.select('body').on('click', function() {
         TOOLTIP.transition().duration(200).style('opacity',0);
+        pinnedTooltip = null; // Unpin tooltip
+        // Deselect all selected bars
+        d3.selectAll('.bar.selected').each(function(data) {
+            d3.select(this).classed('selected', false).style("fill", () => {
+                if (data.missing) {
+                    return MISSING_COLOR;
+                }
+                return colorFunction(data);
+            });
+        });
     });
 
     // Add year divider lines
