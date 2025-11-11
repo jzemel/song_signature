@@ -190,21 +190,21 @@ function renderChart() {
             .style('stroke-width', 1)
             .style('opacity', 0.6);
 
-        var labels = chart.selectAll('.label')
+        var yearLabels = chart.selectAll('.label')
             .data(YEARS)
             .enter()
             .append("g");
         
-        labels
+        yearLabels
             .append('text')
             .classed('year-label', true)
             .text((data) => data)
             .attr('x', MARGINS.left - 15)
             .attr('y', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + 20)
-            .style('font-family', 'sans-serif')
-            .style('font-size', '18px')
-            .style('font-weight', 'bold')
-            .style('fill', '#4281A4')
+            .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
+            .style('font-size', '14px')
+            .style('font-weight', '600')  // Semi-bold instead of bold
+            .style('fill', '#666')  // Gray instead of blue
             .style('text-anchor', 'end');
         
         // Create set labels for each year
@@ -219,10 +219,10 @@ function renderChart() {
             .text(data => data.text)
             .attr('x', MARGINS.left - 15)
             .attr('y', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT*PX_PER_MIN + (data.num-1)*SET_HEIGHT_MINUTES * PX_PER_MIN) + MARGINS.top + 10)
-            .style('font-family', 'sans-serif')
-            .style('font-size', '11px')
-            .style('font-weight', 'bold')
-            .style('fill', '#4281A4')
+            .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
+            .style('font-size', '10px')
+            .style('font-weight', '400')  // Regular weight
+            .style('fill', '#999')  // Lighter gray
             .style('text-anchor', 'end');
 }
 

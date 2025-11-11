@@ -1,7 +1,15 @@
-.controls {
+#controls {
     position: sticky;
     top: 0;
     background: white;
+}
+
+#subtitle {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: bold;
+    font-size: 15px;
+    color: #666;
+    line-height: 1.5;
 }
 
 .bar {
@@ -66,9 +74,16 @@
     margin-left: 20px;
 }
 
+h1 {
+    font-family: Georgia, 'Times New Roman', serif;  // Serif for main title
+    font-size: 32px;
+    font-weight: bold;
+    color: #333;  // Dark gray instead of blue
+    margin-bottom: 8px;
+}
+
 select,
 text,
-h1,
 h2,
 h3,
 h4,
