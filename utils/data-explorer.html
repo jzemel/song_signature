@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phish Data Explorer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .control {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        select, input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats {
+            background: #667eea;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .results {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .results-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 2px solid #e9ecef;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .track-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .track {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        .track:hover {
+            background: #f8f9fa;
+        }
+
+        .track-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .track-song {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .track-duration {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .track-details {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .track-detail {
+            display: flex;
+            gap: 5px;
+        }
+
+        .track-detail-label {
+            font-weight: 600;
+        }
+
+        .show-group {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-bottom: 2px solid #e9ecef;
+            font-weight: 600;
+            color: #667eea;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .file-upload {
+            margin-bottom: 20px;
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .file-upload label:hover {
+            background: #5568d3;
+        }
+
+        .file-name {
+            display: inline-block;
+            margin-left: 10px;
+            color: #666;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+            width: 180px;
+            flex-shrink: 0;
+        }
+
+        .detail-value {
+            color: #333;
+            word-break: break-word;
+        }
+
+        .track {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎸 Phish Data Explorer</h1>
+        
+        <div class="file-upload">
+            <input type="file" id="fileInput" accept=".json">
+            <label for="fileInput">Load shows.json</label>
+            <span class="file-name" id="fileName">No file loaded</span>
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <div class="control">
+                    <label for="yearFilter">Year</label>
+                    <select id="yearFilter">
+                        <option value="">All Years</option>
+                    </select>
+                </div>
+
+                <div class="control">
+                    <label for="monthFilter">Month</label>
+                    <select id="monthFilter">
+                        <option value="">All Months</option>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+
+                <div class="control">
+                    <label for="setFilter">Set</label>
+                    <select id="setFilter">
+                        <option value="">All Sets</option>
+                        <option value="1">Set 1</option>
+                        <option value="2">Set 2</option>
+                        <option value="3">Set 3</option>
+                        <option value="E">Encore</option>
+                    </select>
+                </div>
+
+                <div class="control">
+                    <label for="showPositionFilter">Show Position</label>
+                    <input type="number" id="showPositionFilter" placeholder="e.g. 5" min="1">
+                </div>
+
+                <div class="control">
+                    <label for="songFilter">Song Name</label>
+                    <input type="text" id="songFilter" placeholder="Search songs...">
+                </div>
+
+                <div class="control">
+                    <label for="slugFilter">Song Slug</label>
+                    <input type="text" id="slugFilter" placeholder="e.g. you-enjoy-myself">
+                </div>
+
+                <div class="control">
+                    <label for="venueFilter">Venue</label>
+                    <input type="text" id="venueFilter" placeholder="Search venues...">
+                </div>
+
+                <div class="control">
+                    <label for="minDuration">Min Duration (min)</label>
+                    <input type="number" id="minDuration" placeholder="e.g. 10" min="0" step="0.1">
+                </div>
+
+                <div class="control">
+                    <label for="maxDuration">Max Duration (min)</label>
+                    <input type="number" id="maxDuration" placeholder="e.g. 30" min="0" step="0.1">
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-label">Total Shows</span>
+                    <span class="stat-value" id="totalShows">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Total Tracks</span>
+                    <span class="stat-value" id="totalTracks">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Filtered Tracks</span>
+                    <span class="stat-value" id="filteredTracks">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="results">
+            <div class="results-header">
+                <span id="resultsHeader">Load a file to begin</span>
+            </div>
+            <div class="track-list" id="trackList">
+                <div class="loading">Please load shows.json file above</div>
+            </div>
+        </div>
+
+        <!-- Track Detail Modal -->
+        <div class="modal" id="trackModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title" id="modalTitle">Track Details</div>
+                    <button class="modal-close" id="modalClose">&times;</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allShows = {};
+        let allTracks = [];
+
+        // File upload handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('fileName').textContent = file.name;
+                showProgress(true);
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        allShows = JSON.parse(event.target.result);
+                        processData();
+                        showProgress(false);
+                    } catch (error) {
+                        alert('Error parsing JSON file: ' + error.message);
+                        showProgress(false);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function showProgress(show) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            if (show) {
+                progressBar.style.display = 'block';
+                progressFill.style.width = '50%';
+            } else {
+                progressFill.style.width = '100%';
+                setTimeout(() => {
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 300);
+            }
+        }
+
+        function processData() {
+            // Flatten all tracks
+            allTracks = [];
+            for (const showId in allShows) {
+                const show = allShows[showId];
+                allTracks.push(...show.tracks);
+            }
+
+            // Populate year filter
+            const years = [...new Set(allTracks.map(t => t.year))].sort((a, b) => b - a);
+            const yearFilter = document.getElementById('yearFilter');
+            yearFilter.innerHTML = '<option value="">All Years</option>';
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+
+            // Update stats
+            document.getElementById('totalShows').textContent = Object.keys(allShows).length;
+            document.getElementById('totalTracks').textContent = allTracks.length;
+
+            // Apply filters
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const yearFilter = document.getElementById('yearFilter').value;
+            const monthFilter = document.getElementById('monthFilter').value;
+            const setFilter = document.getElementById('setFilter').value;
+            const showPositionFilter = document.getElementById('showPositionFilter').value;
+            const songFilter = document.getElementById('songFilter').value.toLowerCase();
+            const slugFilter = document.getElementById('slugFilter').value.toLowerCase();
+            const venueFilter = document.getElementById('venueFilter').value.toLowerCase();
+            const minDuration = document.getElementById('minDuration').value;
+            const maxDuration = document.getElementById('maxDuration').value;
+
+            let filtered = allTracks.filter(track => {
+                if (yearFilter && track.year != yearFilter) return false;
+                if (monthFilter && track.month != monthFilter) return false;
+                if (setFilter && track.set != setFilter) return false;
+                if (showPositionFilter && track.show_position != showPositionFilter) return false;
+                if (songFilter && !track.song_name.toLowerCase().includes(songFilter)) return false;
+                if (slugFilter) {
+                    const hasMatchingSlug = track.song_ids.some(slug => 
+                        slug.toLowerCase().includes(slugFilter)
+                    );
+                    if (!hasMatchingSlug) return false;
+                }
+                if (venueFilter && !track.venue.toLowerCase().includes(venueFilter)) return false;
+                if (minDuration && track.duration < parseFloat(minDuration)) return false;
+                if (maxDuration && track.duration > parseFloat(maxDuration)) return false;
+                return true;
+            });
+
+            displayTracks(filtered);
+        }
+
+        function displayTracks(tracks) {
+            document.getElementById('filteredTracks').textContent = tracks.length;
+            document.getElementById('resultsHeader').textContent = 
+                `Showing ${tracks.length} track${tracks.length !== 1 ? 's' : ''}`;
+
+            const trackList = document.getElementById('trackList');
+            
+            if (tracks.length === 0) {
+                trackList.innerHTML = '<div class="loading">No tracks match your filters</div>';
+                return;
+            }
+
+            // Group by show
+            const tracksByShow = {};
+            tracks.forEach(track => {
+                if (!tracksByShow[track.show_id]) {
+                    tracksByShow[track.show_id] = [];
+                }
+                tracksByShow[track.show_id].push(track);
+            });
+
+            // Sort shows by date (descending)
+            const sortedShowIds = Object.keys(tracksByShow).sort((a, b) => {
+                const dateA = tracksByShow[a][0].datestr;
+                const dateB = tracksByShow[b][0].datestr;
+                return dateB.localeCompare(dateA);
+            });
+
+            let html = '';
+            sortedShowIds.forEach(showId => {
+                const showTracks = tracksByShow[showId];
+                const firstTrack = showTracks[0];
+                const show = allShows[showId];
+
+                html += `<div class="show-group">
+                    ${firstTrack.datestr} - ${show.venue_name} (${show.location})
+                </div>`;
+
+                showTracks.sort((a, b) => {
+                    if (a.set !== b.set) return a.set.localeCompare(b.set);
+                    return a.position - b.position;
+                }).forEach(track => {
+                    html += `
+                        <div class="track" onclick="showTrackDetails(${JSON.stringify(track).replace(/"/g, '&quot;')})">
+                            <div class="track-header">
+                                <div class="track-song">${track.song_name}</div>
+                                <div class="track-duration">${track.duration.toFixed(1)} min</div>
+                            </div>
+                            <div class="track-details">
+                                <div class="track-detail">
+                                    <span class="track-detail-label">Set:</span>
+                                    <span>${track.set_name}</span>
+                                </div>
+                                <div class="track-detail">
+                                    <span class="track-detail-label">Position:</span>
+                                    <span>#${track.position}</span>
+                                </div>
+                                <div class="track-detail">
+                                    <span class="track-detail-label">Show Position:</span>
+                                    <span>${track.show_position}</span>
+                                </div>
+                                ${track.first_date_played ? `
+                                <div class="track-detail">
+                                    <span class="track-detail-label">Debut:</span>
+                                    <span>${track.first_date_played}</span>
+                                </div>
+                                ` : ''}
+                                ${track.shows_since_played > 0 ? `
+                                <div class="track-detail">
+                                    <span class="track-detail-label">Gap:</span>
+                                    <span>${track.shows_since_played} shows</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+
+            trackList.innerHTML = html;
+        }
+
+        function showTrackDetails(track) {
+            const modal = document.getElementById('trackModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = track.song_name;
+
+            const details = [
+                { label: 'Track ID', value: track.track_id },
+                { label: 'Song Name', value: track.song_name },
+                { label: 'Song IDs (Slugs)', value: track.song_ids.join(', ') || 'None' },
+                { label: 'Show ID', value: track.show_id },
+                { label: 'Date', value: track.datestr },
+                { label: 'Year', value: track.year },
+                { label: 'Month', value: track.month },
+                { label: 'Day', value: track.day },
+                { label: 'Venue', value: track.venue },
+                { label: 'City', value: track.city },
+                { label: 'Duration', value: `${track.duration.toFixed(2)} minutes` },
+                { label: 'Set', value: track.set },
+                { label: 'Set Name', value: track.set_name },
+                { label: 'Position in Set', value: track.position },
+                { label: 'Start Time in Set', value: `${track.start_time.toFixed(2)} minutes` },
+                { label: 'Show Position', value: track.show_position },
+                { label: 'Shows Since Played', value: track.shows_since_played },
+                { label: 'Days Since Played', value: track.days_since_played },
+                { label: 'First Date Played', value: track.first_date_played || 'Unknown' },
+                { label: 'MP3 URL', value: track.mp3_url ? `<a href="${track.mp3_url}" target="_blank">Listen</a>` : 'Not available' },
+                { label: 'Album Cover URL', value: track.album_cover_url ? `<a href="${track.album_cover_url}" target="_blank">View</a>` : 'Not available' }
+            ];
+
+            let html = '';
+            details.forEach(detail => {
+                html += `
+                    <div class="detail-row">
+                        <div class="detail-label">${detail.label}</div>
+                        <div class="detail-value">${detail.value}</div>
+                    </div>
+                `;
+            });
+
+            modalBody.innerHTML = html;
+            modal.classList.add('active');
+        }
+
+        // Modal close handlers
+        document.getElementById('modalClose').addEventListener('click', function() {
+            document.getElementById('trackModal').classList.remove('active');
+        });
+
+        document.getElementById('trackModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+            }
+        });
+
+        // Add event listeners for filters
+        document.getElementById('yearFilter').addEventListener('change', applyFilters);
+        document.getElementById('monthFilter').addEventListener('change', applyFilters);
+        document.getElementById('setFilter').addEventListener('change', applyFilters);
+        document.getElementById('showPositionFilter').addEventListener('input', applyFilters);
+        document.getElementById('songFilter').addEventListener('input', applyFilters);
+        document.getElementById('slugFilter').addEventListener('input', applyFilters);
+        document.getElementById('venueFilter').addEventListener('input', applyFilters);
+        document.getElementById('minDuration').addEventListener('input', applyFilters);
+        document.getElementById('maxDuration').addEventListener('input', applyFilters);
+    </script>
+</body>
+</html>

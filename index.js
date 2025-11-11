@@ -3,14 +3,12 @@ let allTracks;
 
 // LAYOUT PARAMETERS
 
-const USE_LOCAL_DATA = false;
+const USE_LOCAL_DATA = true;
 const SHOWS_URL = USE_LOCAL_DATA 
-    ? "shows_test.json" 
-    : "https://jzemel.github.io/song_signature/shows.json";
+    ? "/data/shows.json" 
+    : "https://jzemel.github.io/song_signature/data/shows.json";
 
-const CHART_WIDTH = 4200;
-const CHART_HEIGHT = 10000;
-//const MIN_SHOW_WIDTH = 50;
+const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
 const MARGINS = {top:50, bottom:10, left:80};
 const PX_PER_MIN =2;
 const BAR_WIDTH = 20;
@@ -18,38 +16,34 @@ const GAP_WIDTH = 13;
 const SET_HEIGHT_MINUTES = 105;
 const E_HEIGHT_MINUTES = 35;
 const YEAR_HEIGHT = 2 * SET_HEIGHT_MINUTES + E_HEIGHT_MINUTES + 20;
+const CHART_WIDTH = 4200;
+const CHART_HEIGHT = (YEAR_HEIGHT * YEARS.length)*PX_PER_MIN + 100;
 
-//const GAP_WIDE = 30;
-//const VERT_FACTOR = 1.2; //positining factor
-//const SONG_HEIGHT_FACTOR = 1;
-//const SET_OFFSET = 72 * SONG_HEIGHT_FACTOR;
-//const YEAR_OFFSET = 190 * SONG_HEIGHT_FACTOR;
 
 const DEFAULT_COLOR = "orange";
-const SELECTED_COLOR = "green";
+const SELECTED_COLOR = "#4281A4";
+const MISSING_COLOR = "#cccccc";
+const MISSING_DURATION = 8.5; // minutes
 const colorOptions = ["None", "Shows Since Played","Song Age"]; //"Days Since Played" not as interesting as shows
 let colorFunction = function() { return DEFAULT_COLOR }; //global variable holding bar coloring function
 const colorShowsSincePlayed = d3.scaleSequential([-10,80], d3.interpolateYlOrRd).unknown("pink");
 const colorAge = d3.scaleSequential([-5,20], d3.interpolateOranges).unknown("purple");
-//const colorDaysSincePlayed = d3.scaleSequential([-100,1200], d3.interpolateYlOrRd).unknown("purple");
 
 const x = d3.scaleLinear().range([0, CHART_WIDTH]);
-//const y = d3.scaleLinear().range([YEAR_HEIGHT*PX_PER_MIN,0]);
-
 x.domain([0,140]);
-//y.domain([0,180]);
+
 
 // OTHER PARAMETERS
 let SONG_INDEX = {};
 const SHOW_SETS = ["1","2","3","E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
-const YEARS = [2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
 
 
 
 const chartContainer = d3
     .select('svg')
     .attr('width', CHART_WIDTH)
-    .attr('height', CHART_HEIGHT);
+    .attr('height', CHART_HEIGHT)
+    .style('background-color', 'white');
 
 const chart = chartContainer.append('g'); //group of chart elements
 
@@ -114,13 +108,24 @@ function renderChart() {
         .classed('bar',true)
         .attr('id', (data) => "s" + data.track_id)
         .attr('width', BAR_WIDTH)
-        //.attr('height', data => y(data.duration) * PX_PER_MIN)
-        //.attr('duration', data => y(data.duration))
-        .attr('height', data => data.duration * PX_PER_MIN)
+        .attr('height', data => {
+            const duration = data.duration > 0 ? data.duration : MISSING_DURATION;
+            return duration * PX_PER_MIN;
+        })
         .attr('duration', data => data.duration)
         .attr('x', data => x(data.show_position) + MARGINS.left) // maybe change to calendar position?
-        .attr('y', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT + (parseInt(data.set)-1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top)
-        .style("fill", data => colorFunction(data));
+        .attr('y', data => {
+            if (data.duration === 0) {
+                return(((YEARS.indexOf(data.year))*YEAR_HEIGHT + (data.position - 1) * MISSING_DURATION) * PX_PER_MIN + MARGINS.top)
+            } 
+            return(((YEARS.indexOf(data.year))*YEAR_HEIGHT + (parseInt(data.set.replace("E","3"))-1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top)
+        })
+        .style("fill", data => {
+            if (data.duration === 0) {
+                return MISSING_COLOR;
+            }
+            return colorFunction(data);
+        });
 
     chart.selectAll('.bar').data(selectedData, data => data.track_id).exit().remove();
 
@@ -195,7 +200,7 @@ function renderChart() {
             .style('font-family', 'sans-serif')
             .style('font-size', '18px')
             .style('font-weight', 'bold')
-            .style('fill', '#333')
+            .style('fill', '#4281A4')
             .style('text-anchor', 'end');
         
         // Create set labels for each year
@@ -213,7 +218,7 @@ function renderChart() {
             .style('font-family', 'sans-serif')
             .style('font-size', '11px')
             .style('font-weight', 'bold')
-            .style('fill', '#666')
+            .style('fill', '#4281A4')
             .style('text-anchor', 'end');
 }
 
@@ -266,14 +271,23 @@ d3.select("#selectButton").on("change",function(d) {
 
     chart.selectAll('.bar')
         .data(selectedData, data => data.track_id)
-        .style("fill", data => colorFunction(data));
+        .style("fill", data => {
+            if (data.duration === 0) {
+                return MISSING_COLOR;
+            }
+            return colorFunction(data);
+        });
     });
 
 function highlight(className) {
     d3.selectAll("."+className)
         .transition()
         .duration('50')
-        .style('fill', function() {
+        .style('fill', function(data) {
+            // Don't brighten missing tracks
+            if (data.duration === 0) {
+                return MISSING_COLOR;
+            }
             const currentColor = d3.select(this).style('fill');
             return d3.color(currentColor).brighter(0.7);
         }); // brighten color
@@ -282,7 +296,12 @@ function highlight(className) {
 function toggleSelect(className) {
     console.log(className,d3.selectAll("."+className).classed('selected'));
     if(d3.selectAll("."+className).classed('selected')) {
-        d3.selectAll("."+className).classed('selected',false).style("fill", data => colorFunction(data));
+        d3.selectAll("."+className).classed('selected',false).style("fill", data => {
+            if (data.duration === 0) {
+                return MISSING_COLOR;
+            }
+            return colorFunction(data);
+        });
     } else {
         d3.selectAll("."+className).classed('selected',true).style("fill", SELECTED_COLOR);
     }
@@ -296,7 +315,9 @@ function unHighlight(className) {
             // Check if this element is selected
             const isSelected = d3.select(this).classed('selected');
             if (isSelected) {
-                return SELECTED_COLOR; // Keep it green if selected
+                return SELECTED_COLOR; // Keep selected color if selected
+            } else if (data.duration === 0) {
+                return MISSING_COLOR; // Keep missing color for missing tracks
             } else {
                 return colorFunction(data); // Otherwise restore original
             }

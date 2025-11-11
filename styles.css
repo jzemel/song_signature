@@ -1,3 +1,9 @@
+.controls {
+    position: sticky;
+    top: 0;
+    background: white;
+}
+
 .bar {
     stroke-width: 3;
     stroke: white;
@@ -57,7 +63,6 @@
     font-family: sans-serif;
     font-size: 10px;
     font-weight: bold;
-    fill: #333333;
     margin-left: 20px;
 }
 
