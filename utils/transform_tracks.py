@@ -5,29 +5,84 @@ from collections import defaultdict
 # Configuration
 INPUT_FILE = "data/tracks_raw.json"
 OUTPUT_FILE = "data/shows.json"
+MANUAL_UPDATE_FILE = "data/manual_update_record.txt"
+
+def load_manual_updates(filename):
+    """
+    Load manual duration updates from text file.
+
+    Returns:
+        Dict mapping (date, song_name) to updated duration in minutes
+    """
+    print(f"Loading manual updates from {filename}...")
+
+    updates = {}
+    try:
+        with open(filename, 'r') as f:
+            current_date = None
+            current_song = None
+
+            for line in f:
+                line = line.strip()
+
+                # Skip empty lines and separator lines
+                if not line or line.startswith("="):
+                    continue
+
+                # Check if this is a date-song line (format: YYYY-MM-DD - Song Name)
+                if line and not line.startswith("Original:") and " - " in line:
+                    parts = line.split(" - ", 1)
+                    if len(parts) == 2:
+                        date_str = parts[0].strip()
+                        song_name = parts[1].strip()
+
+                        # Verify it's a valid date format
+                        try:
+                            datetime.strptime(date_str, "%Y-%m-%d")
+                            current_date = date_str
+                            current_song = song_name
+                        except ValueError:
+                            continue
+
+                # Check if this is a duration update line
+                elif line.startswith("Original:") and current_date and current_song:
+                    # Parse: "Original: 0.0 min → New: 5.0 min"
+                    try:
+                        new_part = line.split("→ New:")[1].strip()
+                        new_duration = float(new_part.replace("min", "").strip())
+                        updates[(current_date, current_song)] = new_duration
+                    except (IndexError, ValueError):
+                        continue
+
+        print(f"Loaded {len(updates)} manual updates")
+        return updates
+
+    except FileNotFoundError:
+        print(f"Note: Manual update file {filename} not found. Skipping manual updates.")
+        return {}
 
 def load_raw_tracks(filename):
     """
     Load raw track data from JSON file.
-    
+
     Returns:
         List of track objects
     """
     print(f"Loading raw tracks from {filename}...")
-    
+
     try:
         with open(filename, 'r') as f:
             tracks = json.load(f)
-        
+
         print(f"Loaded {len(tracks)} tracks")
-        
+
         if tracks:
             unique_shows = len(set(track["show_date"] for track in tracks))
             print(f"Spanning {unique_shows} shows")
             print(f"Date range: {tracks[0]['show_date']} to {tracks[-1]['show_date']}")
-        
+
         return tracks
-        
+
     except FileNotFoundError:
         print(f"Error: File {filename} not found. Run download_tracks.py first.")
         return []
@@ -122,23 +177,33 @@ def calculate_song_gaps(tracks):
     
     return gaps, first_performances
 
-def transform_tracks(tracks):
+def transform_tracks(tracks, manual_updates=None):
     """
     Transform raw track data into the target structure.
     Organizes tracks by show and calculates all derived fields.
-    
+
+    Args:
+        tracks: List of raw track data
+        manual_updates: Dict mapping (date, song_name) to updated duration in minutes
+
     Returns:
-        Dict with show_id keys containing show data and tracks
+        Tuple of (shows_data dict, manual_update_summary dict)
     """
     print("\nTransforming tracks to target structure...")
-    
+
     if not tracks:
         print("No tracks to transform")
-        return {}
-    
+        return {}, {}
+
+    if manual_updates is None:
+        manual_updates = {}
+
+    # Track manual updates by show for summary
+    manual_update_summary = defaultdict(lambda: {"venue": "", "count": 0})
+
     # Calculate show positions
     show_positions = calculate_show_positions(tracks)
-    
+
     # Calculate song gaps
     song_gaps, first_performances = calculate_song_gaps(tracks)
     
@@ -210,11 +275,11 @@ def transform_tracks(tracks):
                         days_since = song_gaps[gap_key]["days_since_played"]
             
             song_name = " > ".join(song_names) if song_names else track["title"]
-            
+
             # Get start time for this track (cumulative time in the set)
             set_key = str(track["set_name"])
             start_time = set_cumulative_time[set_key]
-            
+
             # Map set_name to set number
             set_name_lower = str(track["set_name"]).lower()
             if set_name_lower == "set 1":
@@ -231,6 +296,22 @@ def transform_tracks(tracks):
                 # Fallback: try to extract number, or use as-is
                 set_number = str(track["set_name"])
 
+            # Calculate duration and check for missing/manual updates
+            duration = track["duration"] / 60000.0  # Convert ms to minutes
+
+            # Check if duration is zero (missing)
+            is_missing = (duration == 0)
+
+            # Check for manual updates
+            update_key = (show_date, song_name)
+            if is_missing and update_key in manual_updates:
+                # Apply manual update
+                duration = manual_updates[update_key]
+
+                # Track this update for summary
+                if manual_update_summary[show_date]["venue"] == "":
+                    manual_update_summary[show_date]["venue"] = track.get("venue_name", "")
+                manual_update_summary[show_date]["count"] += 1
 
             # Create transformed track
             transformed_track = {
@@ -238,7 +319,7 @@ def transform_tracks(tracks):
                 "song_name": song_name,
                 "song_ids": song_ids,
                 "show_id": show_id,
-                "duration": track["duration"] / 60000.0,  # Convert ms to minutes
+                "duration": duration,
                 "datestr": show_date,
                 "position": track["position"],
                 "set": set_number,
@@ -256,16 +337,20 @@ def transform_tracks(tracks):
                 "mp3_url": track.get("mp3_url", ""),
                 "album_cover_url": track.get("show_album_cover_url", "")
             }
-            
+
+            # Add missing flag if duration was zero
+            if is_missing:
+                transformed_track["missing"] = True
+
             shows_data[show_id]["tracks"].append(transformed_track)
-            
+
             # Update cumulative time for this set
             set_cumulative_time[set_key] += transformed_track["duration"]
     
     total_tracks = sum(len(show["tracks"]) for show in shows_data.values())
     print(f"Transformed {total_tracks} tracks into {len(shows_data)} shows")
-    
-    return shows_data
+
+    return shows_data, manual_update_summary
 
 def save_shows(shows_data, filename):
     """
@@ -281,30 +366,34 @@ def save_shows(shows_data, filename):
 def main(test_mode=False):
     """
     Main function to transform raw track data into final show structure.
-    
+
     Args:
         test_mode: If True, use test input/output files
     """
     input_file = "tracks_raw_test.json" if test_mode else INPUT_FILE
     output_file = "shows_test.json" if test_mode else OUTPUT_FILE
-    
+    manual_update_file = MANUAL_UPDATE_FILE
+
     print("="*50)
     print("PHISH TRACK TRANSFORMATION")
     print("="*50)
-    
+
     # Load raw tracks
     tracks = load_raw_tracks(input_file)
-    
+
     if not tracks:
         print("\nNo tracks to process. Exiting.")
         return
-    
+
+    # Load manual updates
+    manual_updates = load_manual_updates(manual_update_file)
+
     # Transform to target structure
-    shows_data = transform_tracks(tracks)
-    
+    shows_data, manual_update_summary = transform_tracks(tracks, manual_updates)
+
     # Save result
     save_shows(shows_data, output_file)
-    
+
     # Print summary
     print("\n" + "="*50)
     print("SUMMARY")
@@ -314,6 +403,15 @@ def main(test_mode=False):
     print(f"Shows:  {len(shows_data)}")
     total_tracks = sum(len(show["tracks"]) for show in shows_data.values())
     print(f"Tracks: {total_tracks}")
+
+    # Print manual updates summary
+    if manual_update_summary:
+        print("\nManual updates applied:")
+        for date in sorted(manual_update_summary.keys()):
+            venue = manual_update_summary[date]["venue"]
+            count = manual_update_summary[date]["count"]
+            print(f"  show {date} {venue} manually updated with {count} tracks")
+
     print("="*50)
 
 if __name__ == "__main__":

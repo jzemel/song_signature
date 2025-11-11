@@ -36,6 +36,7 @@ x.domain([0,140]);
 // OTHER PARAMETERS
 let SONG_INDEX = {};
 const SHOW_SETS = ["1","2","E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
+//TODO add 3rd set functinoality (and cypress!)
 
 
 
@@ -72,9 +73,9 @@ function unpackShows(shows) {
     let maxShows = 1;
     allTracks = [];
     for (i in shows) {
-        if (shows[i].tracks[0].track_id == "37078") {
-            console.log(shows[i]);
-        }
+        // if (shows[i].tracks[0].track_id == "37078") {
+        //     console.log(shows[i]);
+        // }
         if(shows[i].tracks[0].show_position > maxShows){
             maxShows=shows[i].tracks[0].show_position;
         }
@@ -112,19 +113,19 @@ function renderChart() {
         .attr('id', (data) => "s" + data.track_id)
         .attr('width', BAR_WIDTH)
         .attr('height', data => {
-            const duration = data.duration > 0 ? data.duration : MISSING_DURATION;
+            const duration = data.missing ? MISSING_DURATION : data.duration;
             return duration * PX_PER_MIN;
         })
         .attr('duration', data => data.duration)
         .attr('x', data => x(data.show_position) + MARGINS.left) // maybe change to calendar position?
         .attr('y', data => {
-            if (data.duration === 0) {
+            if (data.missing == true) {
                 return(((YEARS.indexOf(data.year))*YEAR_HEIGHT + (data.position - 1) * MISSING_DURATION) * PX_PER_MIN + MARGINS.top)
             }
             return(((YEARS.indexOf(data.year))*YEAR_HEIGHT + (parseInt(data.set.replace("E","3"))-1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top)
         })
         .style("fill", data => {
-            if (data.duration === 0) {
+            if (data.missing) {
                 return MISSING_COLOR;
             }
             return colorFunction(data);
@@ -275,7 +276,7 @@ d3.select("#selectButton").on("change",function(d) {
     chart.selectAll('.bar')
         .data(selectedData, data => data.track_id)
         .style("fill", data => {
-            if (data.duration === 0) {
+            if (data.missing) {
                 return MISSING_COLOR;
             }
             return colorFunction(data);
@@ -288,7 +289,7 @@ function highlight(className) {
         .duration('50')
         .style('fill', function(data) {
             // Don't brighten missing tracks
-            if (data.duration === 0) {
+            if (data.missing) {
                 return MISSING_COLOR;
             }
             const currentColor = d3.select(this).style('fill');
@@ -297,10 +298,10 @@ function highlight(className) {
 }
 
 function toggleSelect(className) {
-    console.log(className,d3.selectAll("."+className).classed('selected'));
+    // console.log(className,d3.selectAll("."+className).classed('selected'));
     if(d3.selectAll("."+className).classed('selected')) {
         d3.selectAll("."+className).classed('selected',false).style("fill", data => {
-            if (data.duration === 0) {
+            if (data.missing) {
                 return MISSING_COLOR;
             }
             return colorFunction(data);
@@ -319,7 +320,7 @@ function unHighlight(className) {
             const isSelected = d3.select(this).classed('selected');
             if (isSelected) {
                 return SELECTED_COLOR; // Keep selected color if selected
-            } else if (data.duration === 0) {
+            } else if (data.missing) {
                 return MISSING_COLOR; // Keep missing color for missing tracks
             } else {
                 return colorFunction(data); // Otherwise restore original
