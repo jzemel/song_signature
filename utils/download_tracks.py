@@ -96,7 +96,8 @@ def get_last_date(filename):
         with open(filename, 'r') as f:
             tracks = json.load(f)
             if tracks:
-                return tracks[-1]["show_date"]
+                # Find the maximum date instead of assuming last track is most recent
+                return max(track["show_date"] for track in tracks)
     except:
         return None
 
