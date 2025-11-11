@@ -35,7 +35,7 @@ x.domain([0,140]);
 
 // OTHER PARAMETERS
 let SONG_INDEX = {};
-const SHOW_SETS = ["1","2","3","E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
+const SHOW_SETS = ["1","2","E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
 
 
 
@@ -72,6 +72,9 @@ function unpackShows(shows) {
     let maxShows = 1;
     allTracks = [];
     for (i in shows) {
+        if (shows[i].tracks[0].track_id == "37078") {
+            console.log(shows[i]);
+        }
         if(shows[i].tracks[0].show_position > maxShows){
             maxShows=shows[i].tracks[0].show_position;
         }
@@ -117,7 +120,7 @@ function renderChart() {
         .attr('y', data => {
             if (data.duration === 0) {
                 return(((YEARS.indexOf(data.year))*YEAR_HEIGHT + (data.position - 1) * MISSING_DURATION) * PX_PER_MIN + MARGINS.top)
-            } 
+            }
             return(((YEARS.indexOf(data.year))*YEAR_HEIGHT + (parseInt(data.set.replace("E","3"))-1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top)
         })
         .style("fill", data => {

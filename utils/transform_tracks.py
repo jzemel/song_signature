@@ -3,8 +3,8 @@ from datetime import datetime
 from collections import defaultdict
 
 # Configuration
-INPUT_FILE = "tracks_raw.json"
-OUTPUT_FILE = "shows.json"
+INPUT_FILE = "data/tracks_raw.json"
+OUTPUT_FILE = "data/shows.json"
 
 def load_raw_tracks(filename):
     """
@@ -225,6 +225,8 @@ def transform_tracks(tracks):
                 set_number = "3"
             elif set_name_lower == "encore":
                 set_number = "E"
+            elif set_name_lower == "soundcheck":
+                set_number = "1"
             else:
                 # Fallback: try to extract number, or use as-is
                 set_number = str(track["set_name"])
