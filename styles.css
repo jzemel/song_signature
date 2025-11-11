@@ -1,7 +1,11 @@
+body {
+    background: #fafafa
+}
+
 #controls {
     position: sticky;
     top: 0;
-    background: white;
+    background: #fafafa;
 }
 
 #subtitle {
@@ -14,7 +18,7 @@
 
 .bar {
     stroke-width: 3;
-    stroke: white;
+    stroke: #fafafa;
 }
 
 .tooltip-donut {

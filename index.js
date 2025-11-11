@@ -9,10 +9,10 @@ const SHOWS_URL = USE_LOCAL_DATA
     : "https://jzemel.github.io/song_signature/data/shows.json";
 
 const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
-const MARGINS = {top:50, bottom:10, left:80};
+const MARGINS = {top: 55, bottom: 20, left: 90};
 const PX_PER_MIN =2;
-const BAR_WIDTH = 20;
-const GAP_WIDTH = 13;
+const BAR_WIDTH = 18;  // Slightly narrower
+const GAP_WIDTH = 15;  // Slightly wider gap
 const SET_HEIGHT_MINUTES = 105;
 const E_HEIGHT_MINUTES = 35;
 const YEAR_HEIGHT = 2 * SET_HEIGHT_MINUTES + E_HEIGHT_MINUTES + 20;
@@ -20,14 +20,20 @@ const CHART_WIDTH = 4200;
 const CHART_HEIGHT = (YEAR_HEIGHT * YEARS.length)*PX_PER_MIN + 100;
 
 
-const DEFAULT_COLOR = "orange";
-const SELECTED_COLOR = "#4281A4";
-const MISSING_COLOR = "#cccccc";
+const DEFAULT_COLOR = "#f4a261";  // Softer orange
+const SELECTED_COLOR = "#2a9d8f";  // Teal instead of blue
+const MISSING_COLOR = "#e9ecef";
 const MISSING_DURATION = 8.5; // minutes
 const colorOptions = ["None", "Shows Since Played","Song Age"]; //"Days Since Played" not as interesting as shows
 let colorFunction = function() { return DEFAULT_COLOR }; //global variable holding bar coloring function
-const colorShowsSincePlayed = d3.scaleSequential([-10,80], d3.interpolateYlOrRd).unknown("pink");
-const colorAge = d3.scaleSequential([-5,20], d3.interpolateOranges).unknown("purple");
+const colorShowsSincePlayed = d3.scaleSequential()
+    .domain([0, 80])
+    .interpolator(d3.interpolateYlOrRd)
+    .unknown("#e9ecef");
+const colorAge = d3.scaleSequential()
+    .domain([0, 20])
+    .interpolator(d3.interpolateOranges)
+    .unknown("#e9ecef");
 
 const x = d3.scaleLinear().range([0, CHART_WIDTH]);
 x.domain([0,140]);
@@ -44,7 +50,7 @@ const chartContainer = d3
     .select('svg')
     .attr('width', CHART_WIDTH)
     .attr('height', CHART_HEIGHT)
-    .style('background-color', 'white');
+    .style('background-color', '#fafafa');
 
 const chart = chartContainer.append('g'); //group of chart elements
 
@@ -129,7 +135,11 @@ function renderChart() {
                 return MISSING_COLOR;
             }
             return colorFunction(data);
-        });
+        })
+        .style("stroke", "#fafafa")  // White stroke
+        .style("stroke-width", 1.8)  // Very thin
+        .attr("rx", 1)  // Optional: very slight border radius (1-2px)
+        .attr("ry", 1);
 
     chart.selectAll('.bar').data(selectedData, data => data.track_id).exit().remove();
 
@@ -171,59 +181,76 @@ function renderChart() {
             renderChart();
         });
 
-        // Click anywhere to hide tooltip (only if nothing is hovered)
-        d3.select('body').on('click', function() {
-            TOOLTIP.transition().duration(200).style('opacity',0);
-        });
+    // Click anywhere to hide tooltip (only if nothing is hovered)
+    d3.select('body').on('click', function() {
+        TOOLTIP.transition().duration(200).style('opacity',0);
+    });
 
-        // Add year divider lines
-        chart.selectAll('.year-divider')
-            .data(YEARS)
-            .enter()
-            .append('line')
-            .classed('year-divider', true)
-            .attr('x1', MARGINS.left - 10)
-            .attr('x2', CHART_WIDTH)
-            .attr('y1', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + MARGINS.top - 15)
-            .attr('y2', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + MARGINS.top - 15)
-            .style('stroke', '#cccccc')
-            .style('stroke-width', 1)
-            .style('opacity', 0.6);
+    // Add year divider lines
+    chart.selectAll('.year-divider')
+        .data(YEARS)
+        .enter()
+        .append('line')
+        .classed('year-divider', true)
+        .attr('x1', MARGINS.left - 10)
+        .attr('x2', CHART_WIDTH)
+        .attr('y1', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + MARGINS.top - 15)
+        .attr('y2', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + MARGINS.top - 15)
+        .style('stroke', '#e0e0e0')  // Lighter gray
+        .style('stroke-width', 1)
+        .style('opacity', 0.5);  // More subtle
 
-        var yearLabels = chart.selectAll('.label')
-            .data(YEARS)
-            .enter()
-            .append("g");
-        
-        yearLabels
-            .append('text')
-            .classed('year-label', true)
-            .text((data) => data)
-            .attr('x', MARGINS.left - 15)
-            .attr('y', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + 20)
-            .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
-            .style('font-size', '14px')
-            .style('font-weight', '600')  // Semi-bold instead of bold
-            .style('fill', '#666')  // Gray instead of blue
-            .style('text-anchor', 'end');
-        
-        // Create set labels for each year
-        var setLabels = chart.selectAll('.set-label-group')
-            .data(YEARS.flatMap(year => 
-                [{'year': year, 'num': 1, 'text': "SET 1"},
-                 {'year': year, 'num': 2, 'text': "SET 2"}, 
-                 {'year': year, 'num': 3, 'text': "E"}]))
-            .enter()
-            .append('text')
-            .classed('set-label', true)
-            .text(data => data.text)
-            .attr('x', MARGINS.left - 15)
-            .attr('y', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT*PX_PER_MIN + (data.num-1)*SET_HEIGHT_MINUTES * PX_PER_MIN) + MARGINS.top + 10)
-            .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
-            .style('font-size', '10px')
-            .style('font-weight', '400')  // Regular weight
-            .style('fill', '#999')  // Lighter gray
-            .style('text-anchor', 'end');
+    var yearLabels = chart.selectAll('.label')
+        .data(YEARS)
+        .enter()
+        .append("g");
+    
+    yearLabels
+        .append('text')
+        .classed('year-label', true)
+        .text((data) => data)
+        .attr('x', MARGINS.left - 15)
+        .attr('y', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + 20)
+        .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
+        .style('font-size', '16px')
+        .style('font-weight', '600')  // Semi-bold instead of bold
+        .style('fill', '#666')  // Gray instead of blue
+        .style('text-anchor', 'end');
+    
+    // Create set labels for each year
+    var setLabels = chart.selectAll('.set-label-group')
+        .data(YEARS.flatMap(year => 
+            [{'year': year, 'num': 1, 'text': "SET 1"},
+             {'year': year, 'num': 2, 'text': "SET 2"}, 
+             {'year': year, 'num': 3, 'text': "E"}]))
+        .enter()
+        .append('text')
+        .classed('set-label', true)
+        .text(data => data.text)
+        .attr('x', MARGINS.left - 15)
+        .attr('y', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT*PX_PER_MIN + (data.num-1)*SET_HEIGHT_MINUTES * PX_PER_MIN) + MARGINS.top + 10)
+        .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
+        .style('font-size', '12px')
+        .style('font-weight', '500')  // Regular weight
+        .style('fill', '#999')  // Lighter gray
+        .style('text-anchor', 'end');
+
+    // Add vertical gridlines for time references
+    // todo add these in when we add calendar mode
+    // const timeGridlines = [20, 40, 60, 80];  // shows (or days)
+    // chart.selectAll('.time-grid')
+    //     .data(timeGridlines)
+    //     .enter()
+    //     .append('line')
+    //     .classed('time-grid', true)
+    //     .attr('x1', d => x(d) + MARGINS.left)
+    //     .attr('x2', d => x(d) + MARGINS.left)
+    //     .attr('y1', MARGINS.top - 20)
+    //     .attr('y2', CHART_HEIGHT - MARGINS.bottom)
+    //     .style('stroke', '#f0f0f0')
+    //     .style('stroke-width', 1)
+    //     .style('stroke-dasharray', '2,2')
+    //     .style('opacity', 0.4);
 }
 
 function filterTo(songIDs) {
