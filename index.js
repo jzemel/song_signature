@@ -78,7 +78,7 @@ chart.on('mouseover', function(event) {
     const songName = barElement.attr("name");
     highlight(songName);
     TOOLTIP.transition().duration(0.5).style('opacity','1');
-    TOOLTIP.style("transform", `translate(${event.pageX + 5}px, ${event.pageY - 5}px)`);
+    TOOLTIP.style("transform", `translate(${event.clientX + 5}px, ${event.clientY - 5}px)`);
 
     // Clean, simple HTML structure
     const phishinUrl = `https://phish.in/${barData.datestr}/${barData.song_ids[0]}`;
@@ -141,18 +141,19 @@ chart.on('click', function(event) {
     event.stopPropagation();
 });
 
-chart.on('dblclick', function(event) {
-    const target = event.target;
-    if (!target.classList.contains('bar')) return;
+// meant to filter the view to just shows with that song but it looks terrible
+// chart.on('dblclick', function(event) {
+//     const target = event.target;
+//     if (!target.classList.contains('bar')) return;
 
-    const barElement = d3.select(target);
-    const trackID = barElement.attr("id").replace(/^\w/g,"");
-    const track = getTrackByID(trackID);
-    console.log(track);
-    const songIDs = track.song_ids;
-    filterTo(songIDs);
-    renderChart();
-});
+//     const barElement = d3.select(target);
+//     const trackID = barElement.attr("id").replace(/^\w/g,"");
+//     const track = getTrackByID(trackID);
+//     console.log(track);
+//     const songIDs = track.song_ids;
+//     filterTo(songIDs);
+//     renderChart();
+// });
 
 const showPromise = fetch(SHOWS_URL)
   .then(
