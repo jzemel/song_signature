@@ -184,7 +184,26 @@ function unpackShows(shows) {
         }
         shows[i].tracks.forEach((track) => {
             if(SHOW_SETS.includes(track.set)) {
-                allTracks.push(track);
+                // Strip unused fields to reduce memory footprint
+                const optimizedTrack = {
+                    track_id: track.track_id,
+                    song_name: track.song_name,
+                    song_ids: track.song_ids,
+                    show_id: track.show_id,
+                    duration: track.duration,
+                    datestr: track.datestr,
+                    venue: track.venue,
+                    show_position: track.show_position,
+                    shows_since_played: track.shows_since_played,
+                    first_date_played: track.first_date_played,
+                    album_cover_url: track.album_cover_url,
+                    missing: track.missing,
+                    year: track.year,
+                    set: track.set,
+                    start_time: track.start_time,
+                    position: track.position
+                };
+                allTracks.push(optimizedTrack);
             }
             track.song_ids.forEach((song_id) => {
                 if(song_id in SONG_INDEX){
@@ -195,7 +214,7 @@ function unpackShows(shows) {
             })
         }); // here you can pack more metadata into track
     }
-    
+
     selectedData = allTracks;
 
     //SHOW_WIDTH = Math.max(MIN_SHOW_WIDTH, CHART_WIDTH/maxShows);
