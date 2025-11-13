@@ -64,6 +64,96 @@ var TOOLTIP = d3.select(".tooltip-donut")
 // Track if tooltip is pinned to a selected bar
 var pinnedTooltip = null;
 
+// Event delegation - attach listeners once to parent chart instead of every bar
+chart.on('mouseover', function(event) {
+    const target = event.target;
+    if (!target.classList.contains('bar')) return;
+
+    // If tooltip is pinned, don't update on hover
+    if (pinnedTooltip !== null) return;
+
+    const barElement = d3.select(target);
+    const barData = barElement.datum();
+
+    const songName = barElement.attr("name");
+    highlight(songName);
+    TOOLTIP.transition().duration(0.5).style('opacity','1');
+    TOOLTIP.style("transform", `translate(${event.pageX + 5}px, ${event.pageY - 5}px)`);
+
+    // Clean, simple HTML structure
+    const phishinUrl = `https://phish.in/${barData.datestr}/${barData.song_ids[0]}`;
+    const albumCover = barData.album_cover_url ?
+        `<img src="${barData.album_cover_url}" class="tooltip-album-cover" alt="Album cover">` : '';
+
+    const tooltipHTML = `
+        ${albumCover}
+        <div class="tooltip-song-name">${barData.song_name}</div>
+        <div class="tooltip-date-venue">${barData.datestr} · ${barData.venue}</div>
+        <div class="tooltip-info">Length: <strong>${Math.round(barData.duration)} min</strong></div>
+        <div class="tooltip-info">Shows since played: <strong>${barData.shows_since_played}</strong></div>
+        <div class="tooltip-info">1st time played: <strong>${barData.first_date_played}</strong></div>
+        ${phishinUrl ? `
+        <div class="tooltip-links">
+            <a href="${phishinUrl}" target="_blank">Listen</a>
+        </div>
+        ` : ''}
+    `;
+
+    TOOLTIP.html(tooltipHTML);
+});
+
+chart.on('mouseout', function(event) {
+    const target = event.target;
+    if (!target.classList.contains('bar')) return;
+
+    const barElement = d3.select(target);
+    const songName = barElement.attr("name");
+    unHighlight(songName);
+
+    // Only hide tooltip if this bar is not selected AND tooltip is not pinned
+    if (!barElement.classed('selected') && pinnedTooltip === null) {
+        TOOLTIP.transition().duration(200).style('opacity',0);
+    }
+});
+
+chart.on('click', function(event) {
+    const target = event.target;
+    if (!target.classList.contains('bar')) return;
+
+    const barElement = d3.select(target);
+    const barData = barElement.datum();
+    const songName = barElement.attr("name");
+
+    // If clicking an already selected bar, deselect it and hide tooltip
+    if (barElement.classed('selected')) {
+        toggleSelect(songName);
+        TOOLTIP.transition().duration(200).style('opacity',0);
+        TOOLTIP.classed('pinned', false);
+        pinnedTooltip = null;
+    } else {
+        // Otherwise select it and keep tooltip visible (pin it)
+        toggleSelect(songName);
+        TOOLTIP.classed('pinned', true);
+        pinnedTooltip = barData.track_id;
+    }
+
+    // Stop event from bubbling to body
+    event.stopPropagation();
+});
+
+chart.on('dblclick', function(event) {
+    const target = event.target;
+    if (!target.classList.contains('bar')) return;
+
+    const barElement = d3.select(target);
+    const trackID = barElement.attr("id").replace(/^\w/g,"");
+    const track = getTrackByID(trackID);
+    console.log(track);
+    const songIDs = track.song_ids;
+    filterTo(songIDs);
+    renderChart();
+});
+
 const showPromise = fetch(SHOWS_URL)
   .then(
     function(response) {
@@ -149,76 +239,6 @@ function renderChart() {
         .attr("ry", 1);
 
     chart.selectAll('.bar').data(selectedData, data => data.track_id).exit().remove();
-
-    chart.selectAll('.bar')
-        .on('mouseover',function(d,i){
-            // If tooltip is pinned to a selected bar, don't update it on hover
-            if (pinnedTooltip !== null) {
-                return;
-            }
-
-            songName = d3.select(this).attr("name");
-            highlight(songName);
-            TOOLTIP.transition().duration(0.5).style('opacity','1');
-            TOOLTIP.style("transform", `translate(${d.pageX + 5}px, ${d.pageY - 5}px)`);
-
-        // Clean, simple HTML structure
-        const phishinUrl = `https://phish.in/${i.datestr}/${i.song_ids[0]}`;
-        const albumCover = i.album_cover_url ? 
-            `<img src="${i.album_cover_url}" class="tooltip-album-cover" alt="Album cover">` : '';
-    
-        const tooltipHTML = `
-            ${albumCover}
-            <div class="tooltip-song-name">${i.song_name}</div>
-            <div class="tooltip-date-venue">${i.datestr} · ${i.venue}</div>
-            <div class="tooltip-info">Length: <strong>${Math.round(i.duration)} min</strong></div>
-            <div class="tooltip-info">Shows since played: <strong>${i.shows_since_played}</strong></div>
-            <div class="tooltip-info">1st time played: <strong>${i.first_date_played}</strong></div>
-            ${phishinUrl ? `
-            <div class="tooltip-links">
-                <a href="${phishinUrl}" target="_blank">Listen</a>
-            </div>
-            ` : ''}
-        `;
-            
-        TOOLTIP.html(tooltipHTML);
-        })
-        .on('mouseout',function(d,i){
-            songName = d3.select(this).attr("name");
-            unHighlight(songName);
-            // Only hide tooltip if this bar is not selected AND tooltip is not pinned
-            if (!d3.select(this).classed('selected') && pinnedTooltip === null) {
-                TOOLTIP.transition().duration(200).style('opacity',0);
-            }
-        })
-        .on('click', function(event, i) {
-            songName = d3.select(this).attr("name");
-
-            // If clicking an already selected bar, deselect it and hide tooltip
-            if (d3.select(this).classed('selected')) {
-                toggleSelect(songName);
-                TOOLTIP.transition().duration(200).style('opacity',0);
-                TOOLTIP.classed('pinned', false); // Remove pinned class
-                pinnedTooltip = null; // Unpin tooltip
-            } else {
-                // Otherwise select it and keep tooltip visible (pin it)
-                toggleSelect(songName);
-                TOOLTIP.classed('pinned', true); // Add pinned class
-                pinnedTooltip = i.track_id; // Pin tooltip to this track
-            }
-
-            // Stop event from bubbling to body
-            event.stopPropagation();
-        })
-        .on('dblclick', function(d,i) {
-            trackID = d3.select(this).attr("id").replace(/^\w/g,"");
-            track = getTrackByID(trackID);
-            console.log(track);
-            songIDs = track.song_ids;
-            filterTo(songIDs);
-            //console.log(i);
-            renderChart();
-        });
 
     // Click anywhere to hide tooltip and deselect all bars
     d3.select('body').on('click', function() {
