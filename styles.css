@@ -22,102 +22,91 @@ body {
 }
 
 .tooltip-donut {
-    position: absolute;
-    text-align: left;
-    padding: 1rem 1.25rem;
-    background: rgba(30, 30, 40, 0.95);
-    color: #ffffff;
-    border: none;
-    border-radius: 12px;
-    pointer-events: auto;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    min-width: 240px;
-    max-width: 320px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    position: fixed;  /* Changed from absolute - fixed is better for transforms */
+    padding: 12px 14px;  /* Reduced from 14px 16px */
+    background: #fcfcfc;  /* Softer white instead of pure white */
+    color: #333;
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    font-size: 13px;
+    line-height: 1.4;  /* Tighter line-height */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    opacity: 0;
+    min-width: 280px;
+    max-width: 360px;
+    box-sizing: border-box;
+    pointer-events: none;  /* Prevent tooltip from interfering with mouse events */
+    left: 0;
+    top: 0;
+    will-change: transform;  /* Hint to browser for GPU acceleration */
 }
 
-.tooltip-donut p {
-    margin: 0.4rem 0;
-}
-
-.tooltip-donut p:first-child {
-    font-weight: 600;
-    font-size: 1rem;
-    color: #fbbf24;
-    margin-bottom: 0.6rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tooltip-donut p:nth-child(2) {
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: #60a5fa;
-    margin-bottom: 0.5rem;
+.tooltip-donut.pinned {
+    pointer-events: auto;  /* Re-enable when pinned so links are clickable */
 }
 
 .tooltip-song-name {
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    color: #fbbf24 !important;
-    margin-bottom: 0.6rem !important;
+    font-weight: 600;
+    font-size: 14px;
+    color: #1a1a1a;  /* Slightly darker for contrast */
+    margin: 0 0 4px 0;  /* Reduced from 6px */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
-.tooltip-donut p:last-child {
-    font-size: 0.85rem;
-    color: #d1d5db;
-    margin-top: 0.5rem;
+.tooltip-info {
+    color: #666;
+    font-size: 12px;
+    margin: 3px 0;  /* Reduced from 2px for tighter spacing */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tooltip-date-venue {
+    color: #846075;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 4px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tooltip-info strong {
+    color: #1a1a1a;
+    font-weight: 500;
 }
 
 .tooltip-album-cover {
-    width: 60px;
-    height: 60px;
-    border-radius: 6px;
     float: right;
-    margin-left: 12px;
-    margin-bottom: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    object-fit: cover;
+    width: 48px;  /* Slightly smaller */
+    height: 48px;
+    border-radius: 2px;
+    margin-left: 10px;
+    margin-bottom: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-.tooltip-play {
-    margin-top: 0.6rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.85rem;
+.tooltip-links {
+    margin-top: 6px;  /* Reduced spacing */
+    padding-top: 6px;
+    border-top: 1px solid #e9ecef;
 }
 
-.tooltip-play a {
-    color: #60a5fa;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s ease;
+.tooltip-links a {
+    display: inline-block;
+    color: #4281A4;
+/*    text-decoration: none;*/
+    font-size: 12px;
 }
 
-.tooltip-play a:hover {
-    color: #93c5fd;
-    text-decoration: underline;
+.tooltip-links a:hover {
+/*    text-decoration: underline;*/
 }
 
-.tooltip-mp3 {
-    margin-top: 0.4rem;
-    font-size: 0.85rem;
-}
-
-.tooltip-mp3 a {
-    color: #60a5fa;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s ease;
-}
-
-.tooltip-mp3 a:hover {
-    color: #93c5fd;
-    text-decoration: underline;
-}
 
 .year-label {
     font-family: sans-serif;

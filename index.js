@@ -160,39 +160,28 @@ function renderChart() {
             songName = d3.select(this).attr("name");
             highlight(songName);
             TOOLTIP.transition().duration(0.5).style('opacity','1');
-            TOOLTIP.style("left", d.pageX+"px").style("top", d.pageY+"px");
+            TOOLTIP.style("transform", `translate(${d.pageX + 5}px, ${d.pageY - 5}px)`);
 
-            // Build tooltip content
-            let tooltipContent = '';
-
-            // Album cover if available
-            if (i.album_cover_url) {
-                tooltipContent += `<img src="${i.album_cover_url}" class="tooltip-album-cover">`;
-            }
-
-            tooltipContent += `<p>${i.datestr} ${i.venue}</p>` +
-                `<p class="tooltip-song-name">${i.song_name}</p>` +
-                `<p>Length: ${Math.round(i.duration)} min</p>` +
-                `<p>Shows since played: ${i.shows_since_played}</p>` +
-                `<p>1st time played: ${i.first_date_played}</p>`;
-
-            // Slugify song name for phish.in URL
-            const songSlug = i.song_name.toLowerCase()
-                .replace(/[^a-z0-9\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-');
-            const phishinUrl = `https://phish.in/${i.datestr}/${songSlug}`;
-
-            // Play Track URL (phish.in)
-            tooltipContent += `<p class="tooltip-play">Play Track: <a href="${phishinUrl}" target="_blank">Listen</a></p>`;
-
-            // MP3 Download URL if available
-            if (i.mp3_url) {
-                tooltipContent += `<p class="tooltip-mp3">Download Track: <a href="${i.mp3_url}" target="_blank">Download</a></p>`;
-            }
-
-            TOOLTIP.html(tooltipContent);
-            //console.log(d);
+        // Clean, simple HTML structure
+        const phishinUrl = `https://phish.in/${i.datestr}/${i.song_ids[0]}`;
+        const albumCover = i.album_cover_url ? 
+            `<img src="${i.album_cover_url}" class="tooltip-album-cover" alt="Album cover">` : '';
+    
+        const tooltipHTML = `
+            ${albumCover}
+            <div class="tooltip-song-name">${i.song_name}</div>
+            <div class="tooltip-date-venue">${i.datestr} · ${i.venue}</div>
+            <div class="tooltip-info">Length: <strong>${Math.round(i.duration)} min</strong></div>
+            <div class="tooltip-info">Shows since played: <strong>${i.shows_since_played}</strong></div>
+            <div class="tooltip-info">1st time played: <strong>${i.first_date_played}</strong></div>
+            ${phishinUrl ? `
+            <div class="tooltip-links">
+                <a href="${phishinUrl}" target="_blank">Listen</a>
+            </div>
+            ` : ''}
+        `;
+            
+        TOOLTIP.html(tooltipHTML);
         })
         .on('mouseout',function(d,i){
             songName = d3.select(this).attr("name");
@@ -209,10 +198,12 @@ function renderChart() {
             if (d3.select(this).classed('selected')) {
                 toggleSelect(songName);
                 TOOLTIP.transition().duration(200).style('opacity',0);
+                TOOLTIP.classed('pinned', false); // Remove pinned class
                 pinnedTooltip = null; // Unpin tooltip
             } else {
                 // Otherwise select it and keep tooltip visible (pin it)
                 toggleSelect(songName);
+                TOOLTIP.classed('pinned', true); // Add pinned class
                 pinnedTooltip = i.track_id; // Pin tooltip to this track
             }
 
@@ -232,6 +223,7 @@ function renderChart() {
     // Click anywhere to hide tooltip and deselect all bars
     d3.select('body').on('click', function() {
         TOOLTIP.transition().duration(200).style('opacity',0);
+        TOOLTIP.classed('pinned', false); // Remove pinned class
         pinnedTooltip = null; // Unpin tooltip
         // Deselect all selected bars
         d3.selectAll('.bar.selected').each(function(data) {
