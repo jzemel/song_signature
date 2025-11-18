@@ -12,12 +12,12 @@ const SHOWS_URL = USE_LOCAL_DATA
 const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
 const MARGINS = {top: 55, bottom: 20, left: 90};
 const PX_PER_MIN =2;
-const BAR_WIDTH = 18;  // Slightly narrower
-const GAP_WIDTH = 15;  // Slightly wider gap
+const BAR_WIDTH = 15;  // Slightly narrower
+const GAP_WIDTH = 10;  // Slightly wider gap - not actually used with x scaling
 const SET_HEIGHT_MINUTES = 105;
 const E_HEIGHT_MINUTES = 35;
 const YEAR_HEIGHT = 2 * SET_HEIGHT_MINUTES + E_HEIGHT_MINUTES + 20;
-const CHART_WIDTH = 4200;
+const CHART_WIDTH = 3600;
 const CHART_HEIGHT = (YEAR_HEIGHT * YEARS.length)*PX_PER_MIN + 100;
 
 
@@ -45,6 +45,8 @@ const YEAR_LABEL_OFFSET_X = -15;
 const YEAR_LABEL_OFFSET_Y = 20;
 const SET_LABEL_OFFSET_X = -15;
 const SET_LABEL_OFFSET_Y = 10;
+const SEASON_DIVIDER_COLOR = '#d0d0d0';
+const SEASON_DIVIDER_OPACITY = 0.4;
 const SHOWS_SINCE_PLAYED_DOMAIN_MIN = -20;
 const SHOWS_SINCE_PLAYED_DOMAIN_MAX = 80;
 const SONG_AGE_DOMAIN_MIN = 0;
@@ -368,6 +370,107 @@ function renderChart() {
             });
         });
     });
+
+    // Calculate season boundaries for dividers
+    const seasonBoundaries = [];
+
+    // Group tracks by year and find first show of each season
+    YEARS.forEach(year => {
+        const yearTracks = selectedData.filter(d => d.year === year);
+        if (yearTracks.length === 0) return;
+
+        // Sort by show_position to get chronological order
+        yearTracks.sort((a, b) => a.show_position - b.show_position);
+
+        let currentSeason = null;
+        let previousTrack = null;
+
+        yearTracks.forEach(track => {
+            // When season changes, mark a boundary between previous and current
+            if (currentSeason !== null && track.season_index !== currentSeason && previousTrack) {
+                // Position halfway between last show of previous season and first show of new season
+                // Use center of each bar (left edge + half width)
+                const prevX = x(previousTrack.show_position) + MARGINS.left + BAR_WIDTH / 2;
+                const currX = x(track.show_position) + MARGINS.left + BAR_WIDTH / 2;
+                const midX = (prevX + currX) / 2;
+
+                seasonBoundaries.push({
+                    year: year,
+                    x: midX,
+                    yearIndex: YEARS.indexOf(year)
+                });
+            }
+            currentSeason = track.season_index;
+            previousTrack = track;
+        });
+
+        // If first show is not winter1 (season_index 0), add divider before first bar
+        if (yearTracks.length > 0 && yearTracks[0].season_index > 0) {
+            const firstX = x(yearTracks[0].show_position) + MARGINS.left;
+            seasonBoundaries.push({
+                year: year,
+                x: firstX - BAR_WIDTH / 2 - 2,
+                yearIndex: YEARS.indexOf(year),
+                isStart: true
+            });
+        }
+    });
+
+    // Add season dividers
+    chart.selectAll('.season-divider')
+        .data(seasonBoundaries)
+        .enter()
+        .append('line')
+        .classed('season-divider', true)
+        .attr('x1', d => d.x)
+        .attr('x2', d => d.x)
+        .attr('y1', d => (d.yearIndex * YEAR_HEIGHT * PX_PER_MIN) + MARGINS.top + YEAR_DIVIDER_OFFSET_Y)
+        .attr('y2', d => ((d.yearIndex + 1) * YEAR_HEIGHT * PX_PER_MIN) + MARGINS.top + YEAR_DIVIDER_OFFSET_Y)
+        .style('stroke', SEASON_DIVIDER_COLOR)
+        .style('stroke-width', 1)
+        .style('opacity', SEASON_DIVIDER_OPACITY);
+
+    // Add season labels at the top (for 2025)
+    const seasonLabels = [];
+    const topYear = YEARS[0]; // 2025
+    const topYearTracks = selectedData.filter(d => d.year === topYear);
+
+    if (topYearTracks.length > 0) {
+        topYearTracks.sort((a, b) => a.show_position - b.show_position);
+
+        const seasonNames = {
+            0: 'WINTER',
+            1: 'SPRING',
+            2: 'SUMMER',
+            3: 'FALL',
+            4: 'WINTER'
+        };
+
+        let seenSeasons = new Set();
+        topYearTracks.forEach(track => {
+            if (!seenSeasons.has(track.season_index)) {
+                seasonLabels.push({
+                    season: seasonNames[track.season_index],
+                    x: x(track.show_position) + MARGINS.left
+                });
+                seenSeasons.add(track.season_index);
+            }
+        });
+    }
+
+    chart.selectAll('.season-label')
+        .data(seasonLabels)
+        .enter()
+        .append('text')
+        .classed('season-label', true)
+        .text(d => d.season)
+        .attr('x', d => d.x)
+        .attr('y', MARGINS.top - 25)
+        .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
+        .style('font-size', '11px')
+        .style('font-weight', '500')
+        .style('fill', '#999')
+        .style('text-anchor', 'start');
 
     // Add year divider lines
     chart.selectAll('.year-divider')
