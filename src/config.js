@@ -1,7 +1,7 @@
 // CONFIGURATION AND CONSTANTS
 
 // Data source configuration
-export const USE_LOCAL_DATA = false;
+export const USE_LOCAL_DATA = true;
 export const SHOWS_URL = USE_LOCAL_DATA
     ? "/data/shows.json"
     : "https://jzemel.github.io/song_signature/data/shows.json";
@@ -41,5 +41,43 @@ export const COLOR_OPTIONS = ["None", "Shows Since Played", "Song Age"];
 export const TOOLTIP_OFFSET_X = 5;
 export const TOOLTIP_OFFSET_Y = -5;
 export const TOOLTIP_FADE_DURATION = 200;
+export const TOOLTIP_SHOW_DURATION = 0.5;
 export const HIGHLIGHT_DURATION = 50;
 export const HIGHLIGHT_BRIGHTNESS = 0.7;
+
+// Bar styling constants
+export const BAR_STROKE_COLOR = "#fafafa";
+export const BAR_STROKE_WIDTH = 1.8;
+export const BAR_BORDER_RADIUS = 1;
+
+// Color scale domains
+export const SHOWS_SINCE_PLAYED_DOMAIN = [-20, 80];
+export const SONG_AGE_DOMAIN = [0, 20];
+
+// Color scale unknown value
+export const COLOR_SCALE_UNKNOWN = "#e9ecef";
+
+// Date calculation constants
+export const MS_PER_SECOND = 1000;
+export const SECONDS_PER_MINUTE = 60;
+export const MINUTES_PER_HOUR = 60;
+export const HOURS_PER_DAY = 24;
+export const DAYS_PER_YEAR = 365;
+export const MS_PER_YEAR = MS_PER_SECOND * SECONDS_PER_MINUTE * MINUTES_PER_HOUR * HOURS_PER_DAY * DAYS_PER_YEAR;
+
+// X scale domain
+export const X_SCALE_MIN = 0;
+export const X_SCALE_MAX = 140;
+
+// Year label styling
+export const YEAR_LABEL_OFFSET_X = -15;
+export const YEAR_LABEL_OFFSET_Y = 20;
+export const YEAR_DIVIDER_OFFSET_X = -10;
+export const YEAR_DIVIDER_OFFSET_Y = -15;
+export const YEAR_DIVIDER_COLOR = '#e0e0e0';
+export const YEAR_DIVIDER_WIDTH = 1;
+export const YEAR_DIVIDER_OPACITY = 0.5;
+
+// Set label positioning
+export const SET_LABEL_OFFSET_X = -15;
+export const SET_LABEL_OFFSET_Y = 10;

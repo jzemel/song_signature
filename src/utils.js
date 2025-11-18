@@ -1,5 +1,7 @@
 // UTILITY FUNCTIONS
 
+import { MS_PER_YEAR } from './config.js';
+
 /**
  * Strip special characters from string to make it HTML/CSS safe
  * @param {string} string - The string to sanitize
@@ -19,7 +21,7 @@ export function stripForHTML(string) {
  */
 export function calculateSongAge(track) {
     const ageMs = Date.now() - new Date(track.first_date_played);
-    return ageMs / (1000 * 60 * 60 * 24 * 365);
+    return ageMs / MS_PER_YEAR;
 }
 
 /**

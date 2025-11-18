@@ -16,10 +16,11 @@ export function handleBarMouseover(event) {
     // If tooltip is pinned, don't update on hover
     if (pinnedTooltip !== null) return;
 
+    // Cache D3 selection for reuse
     const barElement = d3.select(target);
     const barData = barElement.datum();
+    const songName = target.getAttribute("name"); // Direct DOM access is faster
 
-    const songName = barElement.attr("name");
     highlight(songName);
 
     const html = generateTooltipHTML(barData);
@@ -34,12 +35,11 @@ export function handleBarMouseout(event) {
     const target = event.target;
     if (!target.classList.contains('bar')) return;
 
-    const barElement = d3.select(target);
-    const songName = barElement.attr("name");
+    const songName = target.getAttribute("name"); // Direct DOM access
     unHighlight(songName);
 
     // Only hide tooltip if this bar is not selected AND tooltip is not pinned
-    if (!barElement.classed('selected') && pinnedTooltip === null) {
+    if (!target.classList.contains('selected') && pinnedTooltip === null) {
         hideTooltip();
     }
 }
@@ -52,18 +52,18 @@ export function handleBarClick(event) {
     const target = event.target;
     if (!target.classList.contains('bar')) return;
 
-    const barElement = d3.select(target);
-    const barData = barElement.datum();
-    const songName = barElement.attr("name");
+    const songName = target.getAttribute("name"); // Direct DOM access
+    const isSelected = target.classList.contains('selected');
 
     // If clicking an already selected bar, deselect it and hide tooltip
-    if (barElement.classed('selected')) {
+    if (isSelected) {
         toggleSelect(songName);
         hideTooltip();
         unpinTooltip();
         setPinnedTooltip(null);
     } else {
         // Otherwise select it and keep tooltip visible (pin it)
+        const barData = d3.select(target).datum(); // Only get datum when needed
         toggleSelect(songName);
         pinTooltip();
         setPinnedTooltip(barData.track_id);

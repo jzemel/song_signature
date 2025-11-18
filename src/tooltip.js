@@ -1,6 +1,6 @@
 // TOOLTIP MANAGEMENT
 
-import { TOOLTIP_OFFSET_X, TOOLTIP_OFFSET_Y, TOOLTIP_FADE_DURATION } from './config.js';
+import { TOOLTIP_OFFSET_X, TOOLTIP_OFFSET_Y, TOOLTIP_FADE_DURATION, TOOLTIP_SHOW_DURATION } from './config.js';
 
 // Tooltip DOM element
 export const tooltip = d3.select(".tooltip-donut")
@@ -43,7 +43,7 @@ export function generateTooltipHTML(barData) {
  */
 export function showTooltip(x, y, html) {
     tooltip.transition()
-        .duration(0.5)
+        .duration(TOOLTIP_SHOW_DURATION)
         .style('opacity', '1');
     tooltip.style("transform", `translate(${x + TOOLTIP_OFFSET_X}px, ${y + TOOLTIP_OFFSET_Y}px)`);
     tooltip.html(html);

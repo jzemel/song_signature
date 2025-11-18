@@ -1,6 +1,9 @@
 // MAIN ENTRY POINT
 
-import { COLOR_OPTIONS, DEFAULT_COLOR } from './config.js';
+import {
+    COLOR_OPTIONS, DEFAULT_COLOR, SHOWS_SINCE_PLAYED_DOMAIN,
+    SONG_AGE_DOMAIN, COLOR_SCALE_UNKNOWN
+} from './config.js';
 import { setColorFunction } from './state.js';
 import { fetchShowData } from './dataLoader.js';
 import { renderChart, renderStaticElements, updateBarColors, chart } from './rendering.js';
@@ -8,14 +11,14 @@ import { calculateSongAge } from './utils.js';
 
 // Initialize color scales
 const colorShowsSincePlayed = d3.scaleSequential()
-    .domain([-20, 80])
+    .domain(SHOWS_SINCE_PLAYED_DOMAIN)
     .interpolator(d3.interpolateYlGnBu)
-    .unknown("#e9ecef");
+    .unknown(COLOR_SCALE_UNKNOWN);
 
 const colorAge = d3.scaleSequential()
-    .domain([0, 20])
+    .domain(SONG_AGE_DOMAIN)
     .interpolator(d3.interpolateOranges)
-    .unknown("#e9ecef");
+    .unknown(COLOR_SCALE_UNKNOWN);
 
 // Set initial color function
 setColorFunction(() => DEFAULT_COLOR);

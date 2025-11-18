@@ -3,14 +3,18 @@
 import {
     YEARS, MARGINS, PX_PER_MIN, BAR_WIDTH, SET_HEIGHT_MINUTES,
     YEAR_HEIGHT, CHART_WIDTH, CHART_HEIGHT, MISSING_DURATION,
-    MISSING_COLOR, E_HEIGHT_MINUTES
+    MISSING_COLOR, E_HEIGHT_MINUTES, BAR_STROKE_COLOR, BAR_STROKE_WIDTH,
+    BAR_BORDER_RADIUS, X_SCALE_MIN, X_SCALE_MAX, YEAR_LABEL_OFFSET_X,
+    YEAR_LABEL_OFFSET_Y, YEAR_DIVIDER_OFFSET_X, YEAR_DIVIDER_OFFSET_Y,
+    YEAR_DIVIDER_COLOR, YEAR_DIVIDER_WIDTH, YEAR_DIVIDER_OPACITY,
+    SET_LABEL_OFFSET_X, SET_LABEL_OFFSET_Y
 } from './config.js';
 import { selectedData, colorFunction } from './state.js';
 import { stripForHTML } from './utils.js';
 import { handleBarMouseover, handleBarMouseout, handleBarClick, handleBodyClick } from './interactions.js';
 
 // D3 scales
-const xScale = d3.scaleLinear().range([0, CHART_WIDTH]).domain([0, 140]);
+const xScale = d3.scaleLinear().range([0, CHART_WIDTH]).domain([X_SCALE_MIN, X_SCALE_MAX]);
 
 // Chart container and main group
 export const chartContainer = d3.select('svg')
@@ -46,6 +50,14 @@ function calculateY(data) {
     return ((YEARS.indexOf(data.year)) * YEAR_HEIGHT + (parseInt(data.set.replace("E", "3")) - 1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top;
 }
 
+// Calculate bar height for a track
+// TODO height and y to adjust for 3 set shows and cypress
+function calculateHeight(data) {
+    const duration = data.missing ? MISSING_DURATION : data.duration;
+    return duration * PX_PER_MIN;   
+}
+
+
 /**
  * Render the main chart
  */
@@ -63,10 +75,7 @@ export function renderChart() {
         .classed('bar', true)
         .attr('id', data => "s" + data.track_id)
         .attr('width', BAR_WIDTH)
-        .attr('height', data => {
-            const duration = data.missing ? MISSING_DURATION : data.duration;
-            return duration * PX_PER_MIN;
-        })
+        .attr('height', data => calculateHeight(data))
         .attr('duration', data => data.duration)
         .attr('x', data => xScale(data.show_position) + MARGINS.left)
         .attr('y', data => calculateY(data))
@@ -76,10 +85,10 @@ export function renderChart() {
             }
             return colorFunction(data);
         })
-        .style("stroke", "#fafafa")
-        .style("stroke-width", 1.8)
-        .attr("rx", 1)
-        .attr("ry", 1);
+        .style("stroke", BAR_STROKE_COLOR)
+        .style("stroke-width", BAR_STROKE_WIDTH)
+        .attr("rx", BAR_BORDER_RADIUS)
+        .attr("ry", BAR_BORDER_RADIUS);
 
     chart.selectAll('.bar')
         .data(selectedData, data => data.track_id)
@@ -98,13 +107,13 @@ export function renderStaticElements() {
         .enter()
         .append('line')
         .classed('year-divider', true)
-        .attr('x1', MARGINS.left - 10)
+        .attr('x1', MARGINS.left + YEAR_DIVIDER_OFFSET_X)
         .attr('x2', CHART_WIDTH)
-        .attr('y1', data => ((YEARS.indexOf(data)) * YEAR_HEIGHT * PX_PER_MIN) + MARGINS.top - 15)
-        .attr('y2', data => ((YEARS.indexOf(data)) * YEAR_HEIGHT * PX_PER_MIN) + MARGINS.top - 15)
-        .style('stroke', '#e0e0e0')
-        .style('stroke-width', 1)
-        .style('opacity', 0.5);
+        .attr('y1', data => ((YEARS.indexOf(data)) * YEAR_HEIGHT * PX_PER_MIN) + MARGINS.top + YEAR_DIVIDER_OFFSET_Y)
+        .attr('y2', data => ((YEARS.indexOf(data)) * YEAR_HEIGHT * PX_PER_MIN) + MARGINS.top + YEAR_DIVIDER_OFFSET_Y)
+        .style('stroke', YEAR_DIVIDER_COLOR)
+        .style('stroke-width', YEAR_DIVIDER_WIDTH)
+        .style('opacity', YEAR_DIVIDER_OPACITY);
 
     // Add year labels
     const yearLabels = chart.selectAll('.year-label-group')
@@ -116,8 +125,8 @@ export function renderStaticElements() {
         .append('text')
         .classed('year-label', true)
         .text(data => data)
-        .attr('x', MARGINS.left - 15)
-        .attr('y', data => ((YEARS.indexOf(data)) * YEAR_HEIGHT * PX_PER_MIN) + 20)
+        .attr('x', MARGINS.left + YEAR_LABEL_OFFSET_X)
+        .attr('y', data => ((YEARS.indexOf(data)) * YEAR_HEIGHT * PX_PER_MIN) + YEAR_LABEL_OFFSET_Y)
         .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
         .style('font-size', '16px')
         .style('font-weight', '600')
@@ -135,8 +144,8 @@ export function renderStaticElements() {
         .append('text')
         .classed('set-label', true)
         .text(data => data.text)
-        .attr('x', MARGINS.left - 15)
-        .attr('y', data => ((YEARS.indexOf(data.year)) * YEAR_HEIGHT * PX_PER_MIN + (data.num - 1) * SET_HEIGHT_MINUTES * PX_PER_MIN) + MARGINS.top + 10)
+        .attr('x', MARGINS.left + SET_LABEL_OFFSET_X)
+        .attr('y', data => ((YEARS.indexOf(data.year)) * YEAR_HEIGHT * PX_PER_MIN + (data.num - 1) * SET_HEIGHT_MINUTES * PX_PER_MIN) + MARGINS.top + SET_LABEL_OFFSET_Y)
         .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
         .style('font-size', '12px')
         .style('font-weight', '500')
