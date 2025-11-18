@@ -4,7 +4,7 @@ let allTracks;
 // LAYOUT PARAMETERS
 
 // TODO replace this with automatic check of running locally or not
-const USE_LOCAL_DATA = true;
+const USE_LOCAL_DATA = false;
 const SHOWS_URL = USE_LOCAL_DATA 
     ? "/data/shows.json" 
     : "https://jzemel.github.io/song_signature/data/shows.json";
