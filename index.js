@@ -17,23 +17,8 @@ const GAP_WIDTH = 15;  // Slightly wider gap
 const SET_HEIGHT_MINUTES = 105;
 const E_HEIGHT_MINUTES = 35;
 const YEAR_HEIGHT = 2 * SET_HEIGHT_MINUTES + E_HEIGHT_MINUTES + 20;
-
-// Seasonal layout parameters
-const SEASON_SPACING = 30;  // Gap between season groups
-const BASE_SHOW_SPACING = 2;  // Base gap between individual shows (can scale down)
-const BASE_BAR_WIDTH = BAR_WIDTH;  // Base bar width (can scale down)
-
-// Max width allocated to each season (spring/summer/fall get 2x winter)
-const WINTER_WIDTH = 150;
-const BUSY_SEASON_WIDTH = 300;  // Spring, Summer, Fall
-const SEASON_MAX_WIDTHS = [WINTER_WIDTH, BUSY_SEASON_WIDTH, BUSY_SEASON_WIDTH, BUSY_SEASON_WIDTH, WINTER_WIDTH];
-const SEASON_NAMES = ['WINTER', 'SPRING', 'SUMMER', 'FALL', 'WINTER'];
-
-const CHART_WIDTH = SEASON_MAX_WIDTHS.reduce((sum, w) => sum + w, 0) + (4 * SEASON_SPACING) + 200;
+const CHART_WIDTH = 4200;
 const CHART_HEIGHT = (YEAR_HEIGHT * YEARS.length)*PX_PER_MIN + 100;
-
-// Track max shows per season/year for scaling calculations
-let seasonShowCounts = {};
 
 
 const DEFAULT_COLOR = "#f4a261";  // Softer orange
@@ -60,9 +45,6 @@ const YEAR_LABEL_OFFSET_X = -15;
 const YEAR_LABEL_OFFSET_Y = 20;
 const SET_LABEL_OFFSET_X = -15;
 const SET_LABEL_OFFSET_Y = 10;
-const SEASON_LABEL_OFFSET_Y = 30;
-const SEASON_DIVIDER_COLOR = '#e0e0e0';
-const SEASON_DIVIDER_OPACITY = 0.3;
 const SHOWS_SINCE_PLAYED_DOMAIN_MIN = -20;
 const SHOWS_SINCE_PLAYED_DOMAIN_MAX = 80;
 const SONG_AGE_DOMAIN_MIN = 0;
@@ -160,59 +142,6 @@ function calculateBarY(data) {
 function calculateBarHeight(data) {
     const duration = data.missing ? MISSING_DURATION : data.duration;
     return duration * PX_PER_MIN;
-}
-
-/**
- * Get scale factor for bars in a specific season/year
- * @param {number} year - The year
- * @param {number} seasonIndex - Season index (0-4)
- * @returns {number} Scale factor (1.0 or less)
- */
-function getSeasonScale(year, seasonIndex) {
-    const key = `${year}_${seasonIndex}`;
-    const showCount = seasonShowCounts[key] || 1;
-    const maxWidth = SEASON_MAX_WIDTHS[seasonIndex];
-    const requiredWidth = showCount * (BASE_BAR_WIDTH + BASE_SHOW_SPACING);
-
-    // If it fits, no scaling needed
-    if (requiredWidth <= maxWidth) {
-        return 1.0;
-    }
-
-    // Scale down to fit
-    return maxWidth / requiredWidth;
-}
-
-/**
- * Calculate X position for a bar based on season
- * @param {Object} data - Track data object
- * @returns {number} X coordinate in pixels
- */
-function calculateBarX(data) {
-    // Calculate offset to start of this season
-    let seasonOffset = 0;
-    for (let i = 0; i < data.season_index; i++) {
-        seasonOffset += SEASON_MAX_WIDTHS[i] + SEASON_SPACING;
-    }
-
-    // Get scale factor for this season/year
-    const scale = getSeasonScale(data.year, data.season_index);
-    const scaledBarWidth = BASE_BAR_WIDTH * scale;
-    const scaledSpacing = BASE_SHOW_SPACING * scale;
-
-    const positionInSeason = data.season_position * (scaledBarWidth + scaledSpacing);
-
-    return MARGINS.left + seasonOffset + positionInSeason;
-}
-
-/**
- * Calculate scaled bar width for a track
- * @param {Object} data - Track data object
- * @returns {number} Scaled bar width in pixels
- */
-function calculateScaledBarWidth(data) {
-    const scale = getSeasonScale(data.year, data.season_index);
-    return BASE_BAR_WIDTH * scale;
 }
 
 // Event delegation - attach listeners once to parent chart instead of every bar
@@ -364,7 +293,6 @@ function unpackShows(shows) {
     // Second pass: calculate position within each season
     // Group by year and season, then sort by date
     const seasonPositions = {};
-    seasonShowCounts = {};  // Reset global show counts
 
     // Sort all tracks by date
     tracksWithDates.sort((a, b) => new Date(a.datestr) - new Date(b.datestr));
@@ -372,7 +300,6 @@ function unpackShows(shows) {
     // Assign positions within each year-season combination
     tracksWithDates.forEach(track => {
         const key = `${track.year}_${track.season}`;
-        const countKey = `${track.year}_${track.season_index}`;
 
         if (!seasonPositions[key]) {
             seasonPositions[key] = { position: 0, lastShowId: null };
@@ -387,10 +314,6 @@ function unpackShows(shows) {
         }
 
         track.season_position = seasonPositions[key].position;
-
-        // Track max shows per season for scaling
-        seasonShowCounts[countKey] = Math.max(seasonShowCounts[countKey] || 0, track.season_position + 1);
-
         allTracks.push(track);
     });
 
@@ -412,10 +335,10 @@ function renderChart() {
         .attr('class', (data) => stripForHTML(data.song_name))
         .classed('bar',true)
         .attr('id', (data) => "s" + data.track_id)
-        .attr('width', data => calculateScaledBarWidth(data))
+        .attr('width', BAR_WIDTH)
         .attr('height', data => calculateBarHeight(data))
         .attr('duration', data => data.duration)
-        .attr('x', data => calculateBarX(data))
+        .attr('x', data => x(data.show_position) + MARGINS.left)
         .attr('y', data => calculateBarY(data))
         .style("fill", data => {
             if (data.missing) {
@@ -445,53 +368,6 @@ function renderChart() {
             });
         });
     });
-
-    // Add season labels at the top
-    chart.selectAll('.season-label')
-        .data(SEASON_NAMES.map((name, index) => ({ name, index })))
-        .enter()
-        .append('text')
-        .classed('season-label', true)
-        .text(d => d.name)
-        .attr('x', d => {
-            let seasonOffset = 0;
-            for (let i = 0; i < d.index; i++) {
-                seasonOffset += SEASON_MAX_WIDTHS[i] + SEASON_SPACING;
-            }
-            return MARGINS.left + seasonOffset + SEASON_MAX_WIDTHS[d.index] / 2;
-        })
-        .attr('y', SEASON_LABEL_OFFSET_Y)
-        .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
-        .style('font-size', '11px')
-        .style('font-weight', '600')
-        .style('fill', '#888')
-        .style('text-anchor', 'middle');
-
-    // Add vertical dividers between seasons
-    chart.selectAll('.season-divider')
-        .data([1, 2, 3, 4]) // 4 dividers between 5 seasons
-        .enter()
-        .append('line')
-        .classed('season-divider', true)
-        .attr('x1', d => {
-            let offset = 0;
-            for (let i = 0; i < d; i++) {
-                offset += SEASON_MAX_WIDTHS[i] + SEASON_SPACING;
-            }
-            return MARGINS.left + offset - SEASON_SPACING / 2;
-        })
-        .attr('x2', d => {
-            let offset = 0;
-            for (let i = 0; i < d; i++) {
-                offset += SEASON_MAX_WIDTHS[i] + SEASON_SPACING;
-            }
-            return MARGINS.left + offset - SEASON_SPACING / 2;
-        })
-        .attr('y1', MARGINS.top - 10)
-        .attr('y2', CHART_HEIGHT - MARGINS.bottom)
-        .style('stroke', SEASON_DIVIDER_COLOR)
-        .style('stroke-width', 1)
-        .style('opacity', SEASON_DIVIDER_OPACITY);
 
     // Add year divider lines
     chart.selectAll('.year-divider')
