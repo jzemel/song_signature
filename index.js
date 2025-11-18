@@ -12,7 +12,7 @@ const SHOWS_URL = USE_LOCAL_DATA
 const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
 const MARGINS = {top: 55, bottom: 20, left: 90};
 const PX_PER_MIN =2;
-const BAR_WIDTH = 15;  // Slightly narrower
+const BAR_WIDTH = 16;  // Slightly narrower
 const GAP_WIDTH = 10;  // Slightly wider gap - not actually used with x scaling
 const SET_HEIGHT_MINUTES = 105;
 const E_HEIGHT_MINUTES = 35;
@@ -35,7 +35,7 @@ const TOOLTIP_OFFSET_Y = -5;
 const TOOLTIP_FADE_DURATION = 200;
 const TOOLTIP_SHOW_DURATION = 0.5;
 const HIGHLIGHT_DURATION = 50;
-const HIGHLIGHT_BRIGHTNESS = 0.7;
+const HIGHLIGHT_BRIGHTNESS = 0.85;
 const YEAR_DIVIDER_OFFSET_X = -10;
 const YEAR_DIVIDER_OFFSET_Y = -15;
 const YEAR_DIVIDER_COLOR = '#e0e0e0';
@@ -596,9 +596,9 @@ function highlight(className) {
         .duration(HIGHLIGHT_DURATION)
         .style('fill', function(data) {
             // Don't brighten missing tracks
-            if (data.missing) {
-                return MISSING_COLOR;
-            }
+            // if (data.missing) {
+            //     return MISSING_COLOR;
+            // }
             const currentColor = d3.select(this).style('fill');
             return d3.color(currentColor).brighter(HIGHLIGHT_BRIGHTNESS);
         });
