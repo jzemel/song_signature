@@ -4,12 +4,27 @@ let allTracks;
 // LAYOUT PARAMETERS
 
 const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
-const USE_LOCAL_DATA_FOR_DEV = false;
+const USE_LOCAL_DATA_FOR_DEV = true;
 const SHOWS_URL = (isLocal && USE_LOCAL_DATA_FOR_DEV) 
     ? "/data/shows.json" 
     : "https://jzemel.github.io/song_signature/data/shows.json";
 
+// Magic phish knowledge constants
 const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
+const SHOW_SETS = ["1","2", "3", "E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
+const SHOW_SCALE_OVERRIDES = {
+    // Long shows that need vertical compression to fit standard bounds
+    // TODO Add show dates here with their scale factors (< 1.0 to compress)
+    // TODO replace E with set number in data transformation
+    '2024-12-31': 0.7,
+    '2024-08-16': 0.95,
+    '2024-04-18': 0.95,
+    '1999-12-31': 0.45,
+    '1999-12-30': 0.7,
+    // '1998-04-03': 0.7,
+};
+
+// set data layout parameters
 const MARGINS = {top: 55, bottom: 20, left: 90};
 const PX_PER_MIN =2;
 const BAR_WIDTH = 16;  // Slightly narrower
@@ -55,7 +70,6 @@ const COLOR_SCALE_UNKNOWN = "#e9ecef";
 const X_SCALE_MIN = 0;
 const X_SCALE_MAX = 140;
 const MS_PER_YEAR = 1000 * 60 * 60 * 24 * 365;
-const SET_MAPPING_ENCORE = "3"; // Maps 'E' to '3' for positioning
 
 const colorOptions = ["None", "Shows Since Played","Song Age"];
 let colorFunction = function() { return DEFAULT_COLOR };
@@ -76,9 +90,6 @@ x.domain([X_SCALE_MIN, X_SCALE_MAX]);
 
 // OTHER PARAMETERS
 let SONG_INDEX = {};
-const SHOW_SETS = ["1","2","E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
-//TODO add 3rd set functinoality (and cypress!)
-
 
 
 const chartContainer = d3
@@ -132,8 +143,11 @@ function generateTooltipHTML(barData) {
 function calculateBarY(data) {
     if (data.missing === true) {
         return ((YEARS.indexOf(data.year)) * YEAR_HEIGHT + (data.position - 1) * MISSING_DURATION) * PX_PER_MIN + MARGINS.top;
+    } if (data.datestr in SHOW_SCALE_OVERRIDES) {
+        const scale = SHOW_SCALE_OVERRIDES[data.datestr]
+        return ((YEARS.indexOf(data.year)) * YEAR_HEIGHT + (parseInt(data.set.replace("E", 4)) - 1) * SET_HEIGHT_MINUTES * scale + data.start_time * scale) * PX_PER_MIN + MARGINS.top;    
     }
-    return ((YEARS.indexOf(data.year)) * YEAR_HEIGHT + (parseInt(data.set.replace("E", SET_MAPPING_ENCORE)) - 1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top;
+    return ((YEARS.indexOf(data.year)) * YEAR_HEIGHT + (parseInt(data.set.replace("E", 3)) - 1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top;
 }
 
 /**
@@ -142,8 +156,9 @@ function calculateBarY(data) {
  * @returns {number} Height in pixels
  */
 function calculateBarHeight(data) {
+    const scale = SHOW_SCALE_OVERRIDES[data.datestr] || 1.0;
     const duration = data.missing ? MISSING_DURATION : data.duration;
-    return duration * PX_PER_MIN;
+    return duration * PX_PER_MIN * scale;
 }
 
 // Event delegation - attach listeners once to parent chart instead of every bar
