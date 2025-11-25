@@ -40,6 +40,7 @@ body {
     left: 0;
     top: 0;
     will-change: transform;  /* Hint to browser for GPU acceleration */
+    z-index: 1000;  /* Ensure tooltip is above all other elements */
 }
 
 .tooltip-donut.pinned {
@@ -147,6 +148,71 @@ h1 {
     font-weight: bold;
     color: #333;  // Dark gray instead of blue
     margin-bottom: 8px;
+}
+
+#chart-wrapper {
+    position: relative;
+    display: flex;
+}
+
+#labels-container {
+    position: sticky;
+    left: 0;
+    width: 90px; /* matches MARGINS.left */
+    background: #fafafa;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+#svg-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+#svg-container svg {
+    margin-left: -80px; /* Pull SVG left to reduce gap, adjust as needed */
+}
+
+#fixed-scrollbar {
+    position: fixed;
+    bottom: 0;
+    left: 90px; /* offset by labels width */
+    right: 0;
+    height: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    z-index: 100;
+}
+
+#scrollbar-content {
+    height: 1px;
+    width: 3600px; /* matches CHART_WIDTH */
+}
+
+.fixed-year-label {
+    position: absolute;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    fill: #666;
+    color: #666;
+    text-align: right;
+    width: 75px;
+    right: 15px;
+}
+
+.fixed-set-label {
+    position: absolute;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    fill: #999;
+    color: #999;
+    text-align: right;
+    width: 75px;
+    right: 15px;
 }
 
 select,

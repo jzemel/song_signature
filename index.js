@@ -100,6 +100,18 @@ const chartContainer = d3
 
 const chart = chartContainer.append('g'); //group of chart elements
 
+// Sync scrolling between fixed scrollbar and chart
+const svgContainer = document.getElementById('svg-container');
+const fixedScrollbar = document.getElementById('fixed-scrollbar');
+
+svgContainer.addEventListener('scroll', () => {
+    fixedScrollbar.scrollLeft = svgContainer.scrollLeft;
+});
+
+fixedScrollbar.addEventListener('scroll', () => {
+    svgContainer.scrollLeft = fixedScrollbar.scrollLeft;
+});
+
 var TOOLTIP = d3.select(".tooltip-donut")
      .style("opacity", 0)
      .on('click', function(event) {
@@ -487,7 +499,7 @@ function renderChart() {
         .style('fill', '#999')
         .style('text-anchor', 'start');
 
-    // Add year divider lines
+    // Add year divider lines (horizontal)
     chart.selectAll('.year-divider')
         .data(YEARS)
         .enter()
@@ -501,40 +513,41 @@ function renderChart() {
         .style('stroke-width', YEAR_DIVIDER_WIDTH)
         .style('opacity', YEAR_DIVIDER_OPACITY);
 
-    var yearLabels = chart.selectAll('.label')
+    // Add vertical divider line between labels and chart
+    chart.append('line')
+        .classed('labels-divider', true)
+        .attr('x1', MARGINS.left - 10)
+        .attr('x2', MARGINS.left - 10)
+        .attr('y1', 0)
+        .attr('y2', CHART_HEIGHT)
+        .style('stroke', YEAR_DIVIDER_COLOR)
+        .style('stroke-width', YEAR_DIVIDER_WIDTH)
+        .style('opacity', YEAR_DIVIDER_OPACITY);
+
+    // Create fixed HTML labels instead of SVG labels
+    const labelsContainer = d3.select('#labels-container');
+    labelsContainer.style('height', CHART_HEIGHT + 'px');
+
+    // Add year labels
+    labelsContainer.selectAll('.fixed-year-label')
         .data(YEARS)
         .enter()
-        .append("g");
-    
-    yearLabels
-        .append('text')
-        .classed('year-label', true)
-        .text((data) => data)
-        .attr('x', MARGINS.left + YEAR_LABEL_OFFSET_X)
-        .attr('y', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + YEAR_LABEL_OFFSET_Y)
-        .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
-        .style('font-size', '16px')
-        .style('font-weight', '600')  // Semi-bold instead of bold
-        .style('fill', '#666')  // Gray instead of blue
-        .style('text-anchor', 'end');
-    
-    // Create set labels for each year
-    var setLabels = chart.selectAll('.set-label-group')
-        .data(YEARS.flatMap(year => 
+        .append('div')
+        .classed('fixed-year-label', true)
+        .text(year => year)
+        .style('top', year => ((YEARS.indexOf(year))*YEAR_HEIGHT*PX_PER_MIN + YEAR_LABEL_OFFSET_Y) + 'px');
+
+    // Add set labels for each year
+    labelsContainer.selectAll('.fixed-set-label')
+        .data(YEARS.flatMap(year =>
             [{'year': year, 'num': 1, 'text': "SET 1"},
-             {'year': year, 'num': 2, 'text': "SET 2"}, 
+             {'year': year, 'num': 2, 'text': "SET 2"},
              {'year': year, 'num': 3, 'text': "E"}]))
         .enter()
-        .append('text')
-        .classed('set-label', true)
+        .append('div')
+        .classed('fixed-set-label', true)
         .text(data => data.text)
-        .attr('x', MARGINS.left + SET_LABEL_OFFSET_X)
-        .attr('y', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT*PX_PER_MIN + (data.num-1)*SET_HEIGHT_MINUTES * PX_PER_MIN) + MARGINS.top + SET_LABEL_OFFSET_Y)
-        .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
-        .style('font-size', '12px')
-        .style('font-weight', '500')  // Regular weight
-        .style('fill', '#999')  // Lighter gray
-        .style('text-anchor', 'end');
+        .style('top', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT*PX_PER_MIN + (data.num-1)*SET_HEIGHT_MINUTES * PX_PER_MIN + MARGINS.top + SET_LABEL_OFFSET_Y) + 'px');
 }
 
 /**
