@@ -150,6 +150,29 @@ h1 {
     margin-bottom: 8px;
 }
 
+#sticky-season-labels {
+    position: sticky;
+    top: 0;
+    height: 30px;
+    background: #fafafa;
+    z-index: 50;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    margin-left: 90px; /* align with chart data */
+    will-change: transform;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.sticky-season-label {
+    position: absolute;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: #999;
+    top: 8px;
+    transition: left 0.2s ease-out;
+}
+
 #chart-wrapper {
     position: relative;
     display: flex;

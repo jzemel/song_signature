@@ -90,6 +90,8 @@ x.domain([X_SCALE_MIN, X_SCALE_MAX]);
 
 // OTHER PARAMETERS
 let SONG_INDEX = {};
+let seasonLabelsByYear = {}; // Store season label positions for each year
+let lastVisibleYear = null; // Track current visible year
 
 
 const chartContainer = d3
@@ -457,47 +459,37 @@ function renderChart() {
         .style('stroke-width', 1)
         .style('opacity', SEASON_DIVIDER_OPACITY);
 
-    // Add season labels at the top (for 2025)
-    const seasonLabels = [];
-    const topYear = YEARS[0]; // 2025
-    const topYearTracks = selectedData.filter(d => d.year === topYear);
+    // Store season labels for all years
+    const seasonNames = {
+        0: 'WINTER',
+        1: 'SPRING',
+        2: 'SUMMER',
+        3: 'FALL',
+        4: 'WINTER'
+    };
 
-    if (topYearTracks.length > 0) {
-        topYearTracks.sort((a, b) => a.show_position - b.show_position);
+    YEARS.forEach(year => {
+        const yearTracks = selectedData.filter(d => d.year === year);
+        if (yearTracks.length === 0) return;
 
-        const seasonNames = {
-            0: 'WINTER',
-            1: 'SPRING',
-            2: 'SUMMER',
-            3: 'FALL',
-            4: 'WINTER'
-        };
+        yearTracks.sort((a, b) => a.show_position - b.show_position);
 
+        const labels = [];
         let seenSeasons = new Set();
-        topYearTracks.forEach(track => {
+        yearTracks.forEach(track => {
             if (!seenSeasons.has(track.season_index)) {
-                seasonLabels.push({
+                labels.push({
                     season: seasonNames[track.season_index],
-                    x: x(track.show_position) + MARGINS.left
+                    x: x(track.show_position) + MARGINS.left - 80 // Account for negative margin
                 });
                 seenSeasons.add(track.season_index);
             }
         });
-    }
+        seasonLabelsByYear[year] = labels;
+    });
 
-    chart.selectAll('.season-label')
-        .data(seasonLabels)
-        .enter()
-        .append('text')
-        .classed('season-label', true)
-        .text(d => d.season)
-        .attr('x', d => d.x)
-        .attr('y', MARGINS.top - 25)
-        .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif')
-        .style('font-size', '11px')
-        .style('font-weight', '500')
-        .style('fill', '#999')
-        .style('text-anchor', 'start');
+    // Initialize sticky season labels with first year
+    updateStickySeasonLabels(YEARS[0]);
 
     // Add year divider lines (horizontal)
     chart.selectAll('.year-divider')
@@ -549,6 +541,97 @@ function renderChart() {
         .text(data => data.text)
         .style('top', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT*PX_PER_MIN + (data.num-1)*SET_HEIGHT_MINUTES * PX_PER_MIN + MARGINS.top + SET_LABEL_OFFSET_Y) + 'px');
 }
+
+/**
+ * Update sticky season labels for a specific year
+ * @param {number} year - The year to display season labels for
+ */
+function updateStickySeasonLabels(year) {
+    const labels = seasonLabelsByYear[year] || [];
+    const container = d3.select('#sticky-season-labels');
+
+    // Bind data and update labels
+    const seasonLabels = container.selectAll('.sticky-season-label')
+        .data(labels, d => d.season);
+
+    // Remove old labels
+    seasonLabels.exit().remove();
+
+    // Add new labels
+    seasonLabels.enter()
+        .append('div')
+        .classed('sticky-season-label', true)
+        .merge(seasonLabels)
+        .text(d => d.season)
+        .style('left', d => d.x + 'px');
+}
+
+/**
+ * Calculate which year is currently visible at the top of the viewport
+ * @returns {number} The year currently at the top
+ */
+function calculateVisibleYear() {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const controlsHeight = document.getElementById('controls').offsetHeight + 20; // Include padding
+    const stickyLabelsHeight = 30;
+
+    // Adjust for controls and sticky labels
+    const chartScrollTop = Math.max(0, scrollTop - controlsHeight - stickyLabelsHeight);
+
+    // Calculate year index based on scroll position
+    const yearIndex = Math.floor((chartScrollTop - MARGINS.top) / (YEAR_HEIGHT * PX_PER_MIN));
+
+    // Clamp to valid range
+    const clampedIndex = Math.max(0, Math.min(yearIndex, YEARS.length - 1));
+
+    return YEARS[clampedIndex];
+}
+
+/**
+ * Throttle function to limit execution frequency
+ * @param {Function} func - Function to throttle
+ * @param {number} wait - Milliseconds to wait between executions
+ * @returns {Function} Throttled function
+ */
+function throttle(func, wait) {
+    let timeout = null;
+    let previous = 0;
+
+    return function(...args) {
+        const now = Date.now();
+        const remaining = wait - (now - previous);
+
+        if (remaining <= 0 || remaining > wait) {
+            if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
+            }
+            previous = now;
+            func.apply(this, args);
+        } else if (!timeout) {
+            timeout = setTimeout(() => {
+                previous = Date.now();
+                timeout = null;
+                func.apply(this, args);
+            }, remaining);
+        }
+    };
+}
+
+// Add scroll listener for updating sticky season labels
+window.addEventListener('scroll', throttle(() => {
+    const currentYear = calculateVisibleYear();
+    if (currentYear !== lastVisibleYear) {
+        updateStickySeasonLabels(currentYear);
+        lastVisibleYear = currentYear;
+    }
+}, 100));
+
+// Sync horizontal scroll between sticky labels and chart
+const stickyLabels = document.getElementById('sticky-season-labels');
+svgContainer.addEventListener('scroll', () => {
+    stickyLabels.scrollLeft = svgContainer.scrollLeft;
+});
 
 /**
  * Filter tracks to only shows containing specified songs
