@@ -1,11 +1,15 @@
+:root {
+    --background-color: #fafafa;
+}
+
 body {
-    background: #fafafa
+    background: var(--background-color);
 }
 
 #controls {
     position: sticky;
     top: 0;
-    background: #fafafa;
+    background: var(--background-color);
     z-index: 60; /* Above season labels */
     padding-bottom: 10px;
 }
@@ -20,7 +24,7 @@ body {
 
 .bar {
     stroke-width: 3;
-    stroke: #fafafa;
+    stroke: var(--background-color);
 }
 
 .tooltip-donut {
@@ -131,7 +135,7 @@ body {
     padding: 6px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    background: white;
+    background: var(--background-color);
     color: #333;
     cursor: pointer;
 }
@@ -156,7 +160,7 @@ h1 {
     position: sticky;
     top: 90px; /* Below controls + padding (80px + 10px padding) */
     height: 30px;
-    background: #fafafa;
+    background: var(--background-color);
     z-index: 50;
     overflow-x: auto;
     overflow-y: hidden;
@@ -194,7 +198,7 @@ h1 {
     position: sticky;
     left: 0;
     width: 90px; /* matches MARGINS.left */
-    background: #fafafa;
+    background: var(--background-color);
     z-index: 10;
     flex-shrink: 0;
     padding-top: 55px; /* Match MARGINS.top to align content */
@@ -227,7 +231,7 @@ h1 {
     height: 20px;
     overflow-x: auto;
     overflow-y: hidden;
-    background: #fafafa;
+    background: var(--background-color);
     border-top: 1px solid #e0e0e0;
     z-index: 100;
 }

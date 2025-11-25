@@ -24,19 +24,23 @@ const SHOW_SCALE_OVERRIDES = {
     // '1998-04-03': 0.7,
 };
 
-// set data layout parameters
+// Layout parameters
 const MARGINS = {top: 55, bottom: 20, left: 90};
-const PX_PER_MIN =2;
-const BAR_WIDTH = 16;  // Slightly narrower
-const GAP_WIDTH = 10;  // Slightly wider gap - not actually used with x scaling
+const PX_PER_MIN = 2;
+const BAR_WIDTH = 16;
+const GAP_WIDTH = 10; // Not currently used with x scaling
 const SET_HEIGHT_MINUTES = 105;
 const E_HEIGHT_MINUTES = 35;
 const YEAR_HEIGHT = 2 * SET_HEIGHT_MINUTES + E_HEIGHT_MINUTES + 20;
 const CHART_WIDTH = 3600;
-const CHART_HEIGHT = (YEAR_HEIGHT * YEARS.length)*PX_PER_MIN + 100;
-const STICKY_SEASON_LABELS_TOP = 90; // Season labels sticky position from top of viewport
-const STICKY_SEASON_LABELS_HEIGHT = 30; // Season labels container height
-const CHART_WRAPPER_MARGIN_TOP = -55; // Negative margin to align chart
+const CHART_HEIGHT = (YEAR_HEIGHT * YEARS.length) * PX_PER_MIN + 100;
+
+// Sticky element positioning (matches CSS values)
+const CONTROLS_HEIGHT = 80; // Approximate height of controls sticky element
+const CONTROLS_PADDING_BOTTOM = 10; // Padding below controls
+const STICKY_SEASON_LABELS_TOP = CONTROLS_HEIGHT + CONTROLS_PADDING_BOTTOM; // 90px - positions below controls
+const STICKY_SEASON_LABELS_HEIGHT = 30;
+const CHART_WRAPPER_MARGIN_TOP = -MARGINS.top; // -55px - pull chart up to align with sticky labels
 
 
 const DEFAULT_COLOR = "#f4a261";  // Softer orange
