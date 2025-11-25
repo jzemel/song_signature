@@ -6,6 +6,8 @@ body {
     position: sticky;
     top: 0;
     background: #fafafa;
+    z-index: 60; /* Above season labels */
+    padding-bottom: 10px;
 }
 
 #subtitle {
@@ -152,15 +154,24 @@ h1 {
 
 #sticky-season-labels {
     position: sticky;
-    top: 0;
+    top: 90px; /* Below controls + padding (80px + 10px padding) */
     height: 30px;
     background: #fafafa;
     z-index: 50;
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: hidden;
     margin-left: 90px; /* align with chart data */
     will-change: transform;
-    border-bottom: 1px solid #e0e0e0;
+    max-width: calc(100vw - 90px); /* match svg-container width */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+    border-bottom: 1px solid rgba(224, 224, 224, 0.5); /* Match year divider: #e0e0e0 with 0.5 opacity */
+}
+
+#sticky-season-labels::-webkit-scrollbar {
+    display: none; /* Hide scrollbar but keep scrolling functionality */
+    width: 0;
+    height: 0;
 }
 
 .sticky-season-label {
@@ -169,13 +180,14 @@ h1 {
     font-size: 11px;
     font-weight: 500;
     color: #999;
-    top: 8px;
+    top: 10px;
     transition: left 0.2s ease-out;
 }
 
 #chart-wrapper {
     position: relative;
     display: flex;
+    margin-top: -55px; /* Pull up to eliminate MARGINS.top whitespace */
 }
 
 #labels-container {
@@ -185,6 +197,17 @@ h1 {
     background: #fafafa;
     z-index: 10;
     flex-shrink: 0;
+    padding-top: 55px; /* Match MARGINS.top to align content */
+}
+
+#labels-container::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 55px; /* Start border at MARGINS.top */
+    bottom: 0;
+    width: 1px;
+    background: rgba(224, 224, 224, 0.5); /* Match year divider style */
 }
 
 #svg-container {

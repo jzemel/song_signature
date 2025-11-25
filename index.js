@@ -34,6 +34,9 @@ const E_HEIGHT_MINUTES = 35;
 const YEAR_HEIGHT = 2 * SET_HEIGHT_MINUTES + E_HEIGHT_MINUTES + 20;
 const CHART_WIDTH = 3600;
 const CHART_HEIGHT = (YEAR_HEIGHT * YEARS.length)*PX_PER_MIN + 100;
+const STICKY_SEASON_LABELS_TOP = 90; // Season labels sticky position from top of viewport
+const STICKY_SEASON_LABELS_HEIGHT = 30; // Season labels container height
+const CHART_WRAPPER_MARGIN_TOP = -55; // Negative margin to align chart
 
 
 const DEFAULT_COLOR = "#f4a261";  // Softer orange
@@ -505,17 +508,6 @@ function renderChart() {
         .style('stroke-width', YEAR_DIVIDER_WIDTH)
         .style('opacity', YEAR_DIVIDER_OPACITY);
 
-    // Add vertical divider line between labels and chart
-    chart.append('line')
-        .classed('labels-divider', true)
-        .attr('x1', MARGINS.left - 10)
-        .attr('x2', MARGINS.left - 10)
-        .attr('y1', 0)
-        .attr('y2', CHART_HEIGHT)
-        .style('stroke', YEAR_DIVIDER_COLOR)
-        .style('stroke-width', YEAR_DIVIDER_WIDTH)
-        .style('opacity', YEAR_DIVIDER_OPACITY);
-
     // Create fixed HTML labels instead of SVG labels
     const labelsContainer = d3.select('#labels-container');
     labelsContainer.style('height', CHART_HEIGHT + 'px');
@@ -550,8 +542,18 @@ function updateStickySeasonLabels(year) {
     const labels = seasonLabelsByYear[year] || [];
     const container = d3.select('#sticky-season-labels');
 
+    // Ensure we have a content wrapper with proper width
+    let wrapper = container.select('.sticky-labels-wrapper');
+    if (wrapper.empty()) {
+        wrapper = container.append('div')
+            .classed('sticky-labels-wrapper', true)
+            .style('position', 'relative')
+            .style('width', CHART_WIDTH + 'px')
+            .style('height', '100%');
+    }
+
     // Bind data and update labels
-    const seasonLabels = container.selectAll('.sticky-season-label')
+    const seasonLabels = wrapper.selectAll('.sticky-season-label')
         .data(labels, d => d.season);
 
     // Remove old labels
@@ -572,14 +574,18 @@ function updateStickySeasonLabels(year) {
  */
 function calculateVisibleYear() {
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const controlsHeight = document.getElementById('controls').offsetHeight + 20; // Include padding
-    const stickyLabelsHeight = 30;
 
-    // Adjust for controls and sticky labels
-    const chartScrollTop = Math.max(0, scrollTop - controlsHeight - stickyLabelsHeight);
+    // Position just below the season labels divider in viewport coordinates
+    const checkPositionInViewport = STICKY_SEASON_LABELS_TOP + STICKY_SEASON_LABELS_HEIGHT;
 
-    // Calculate year index based on scroll position
-    const yearIndex = Math.floor((chartScrollTop - MARGINS.top) / (YEAR_HEIGHT * PX_PER_MIN));
+    // Convert to absolute position on the page
+    const absolutePosition = scrollTop + checkPositionInViewport;
+
+    // Account for chart wrapper negative margin and internal chart margins
+    const positionInChartData = absolutePosition + CHART_WRAPPER_MARGIN_TOP - MARGINS.top;
+
+    // Calculate which year this position corresponds to
+    const yearIndex = Math.floor(positionInChartData / (YEAR_HEIGHT * PX_PER_MIN));
 
     // Clamp to valid range
     const clampedIndex = Math.max(0, Math.min(yearIndex, YEARS.length - 1));
