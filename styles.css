@@ -164,6 +164,7 @@ h1 {
     height: 26px;
     cursor: pointer;
     z-index: 70;
+    filter: brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(6477%) hue-rotate(343deg) brightness(95%) contrast(98%);
 }
 
 /* Modal */
