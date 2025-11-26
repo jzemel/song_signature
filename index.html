@@ -11,11 +11,25 @@
 <body>
     <div id="controls">
         <h1>When did Phish play that song and for how long?</h1>
+        <img id="help-icon" src="images/Icon Help.png" alt="Help" title="WTF is this?">
         <span  id="subtitle">
             Colorcode Songs by
             <select id="selectButton">
             </select>
         </span>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <span id="modal-close">&times;</span>
+            <img id="modal-image" src="images/Phish How To (1).jpg" alt="Help">
+            <div class="modal-nav">
+                <button id="prev-slide">&larr;</button>
+                <span id="slide-counter">1 / 5</span>
+                <button id="next-slide">&rarr;</button>
+            </div>
+        </div>
     </div>
     <p></p>
     <div class='tooltip-donut'></div>

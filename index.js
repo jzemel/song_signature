@@ -781,3 +781,55 @@ function Age(track){
     const age_ms = Date.now() - new Date(track.first_date_played);
     return age_ms / MS_PER_YEAR;
 }
+
+// Help Modal
+const helpSlides = [
+    'images/Phish How To (1).jpg',
+    'images/Phish How To (2).jpg',
+    'images/Phish How To (3).jpg',
+    'images/Phish How To (4).jpg',
+    'images/Phish How To (5).jpg'
+];
+
+let currentSlide = 0;
+
+const modal = document.getElementById('help-modal');
+const modalImage = document.getElementById('modal-image');
+const slideCounter = document.getElementById('slide-counter');
+const helpIcon = document.getElementById('help-icon');
+const closeBtn = document.getElementById('modal-close');
+const prevBtn = document.getElementById('prev-slide');
+const nextBtn = document.getElementById('next-slide');
+
+function showSlide(n) {
+    currentSlide = Math.max(0, Math.min(n, helpSlides.length - 1));
+    modalImage.src = helpSlides[currentSlide];
+    slideCounter.textContent = `${currentSlide + 1} / ${helpSlides.length}`;
+    prevBtn.disabled = currentSlide === 0;
+    nextBtn.disabled = currentSlide === helpSlides.length - 1;
+}
+
+function handleOpenModal() {
+    modal.classList.add('active');
+    showSlide(0);
+}
+
+function handleCloseModal() {
+    modal.classList.remove('active');
+}
+
+helpIcon.addEventListener('click', handleOpenModal);
+closeBtn.addEventListener('click', handleCloseModal);
+prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+
+modal.addEventListener('click', (e) => {
+    if (e.target === modal) handleCloseModal();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (!modal.classList.contains('active')) return;
+    if (e.key === 'Escape') handleCloseModal();
+    if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+    if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+});
