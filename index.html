@@ -11,6 +11,11 @@
 <body>
     <div id="controls">
         <h1>When did Phish play that song and for how long?</h1>
+        <script>
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                document.querySelector('h1').textContent = "Phish setlists doesn't work on mobile - try desktop browser!";
+            }
+        </script>
         <img id="help-icon" src="images/Icon Help.png" alt="Help" title="WTF is this?">
         <span  id="subtitle">
             Colorcode Songs by
