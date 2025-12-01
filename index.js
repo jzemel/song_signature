@@ -44,9 +44,28 @@ const CHART_WRAPPER_MARGIN_TOP = -MARGINS.top; // -55px - pull chart up to align
 
 
 const DEFAULT_COLOR = "#f4a261";  // Softer orange
-const SELECTED_COLOR = "#2a9d8f";  // Teal instead of blue
 const MISSING_COLOR = "#e9ecef";
 const MISSING_DURATION = 8.5; // minutes
+
+// Color mode-specific highlight and selected colors
+const COLOR_MODE_STYLES = {
+    "None": {
+        highlight: "#ffdb83",  // Brightened orange (matches old brighten effect)
+        selected: "#2589BD"    // Ocean blue
+    },
+    "Shows Since Played": {
+        highlight: "#ff1493",  // Deep pink (outside YlGnBu gradient)
+        selected: "#91171F"    // Deep crimson
+    },
+    "Song Age": {
+        highlight: "#00d4ff",  // Bright cyan (outside Oranges gradient)
+        selected: "#0099ff"    // Vivid blue
+    },
+    "Likes": {
+        highlight: "#F39C6B",  // Tangerine dream (outside Purples gradient)
+        selected: "#DD8E61"    // Toasted almond (alt: FFF05A, 482728)
+    }
+};
 
 // Magic number constants
 const BAR_STROKE_COLOR = "#fafafa";
@@ -57,7 +76,6 @@ const TOOLTIP_OFFSET_Y = -5;
 const TOOLTIP_FADE_DURATION = 200;
 const TOOLTIP_SHOW_DURATION = 0.5;
 const HIGHLIGHT_DURATION = 50;
-const HIGHLIGHT_BRIGHTNESS = 0.85;
 const YEAR_DIVIDER_OFFSET_X = -10;
 const YEAR_DIVIDER_OFFSET_Y = -15;
 const YEAR_DIVIDER_COLOR = '#e0e0e0';
@@ -98,6 +116,7 @@ const colorLikesCount = d3.scaleSequential()
     .unknown(COLOR_SCALE_UNKNOWN);
 
 let colorFunction = function(track) { return colorShowsSincePlayed(track.shows_since_played); };
+let currentColorMode = "Shows Since Played"; // Track current color mode for highlight/selected colors
 
 const x = d3.scaleLinear().range([0, CHART_WIDTH]);
 x.domain([X_SCALE_MIN, X_SCALE_MAX]);
@@ -692,6 +711,7 @@ d3.select("#selectButton")
 
 d3.select("#selectButton").on("change",function(d) {
     let selectedFunction = d3.select(this).property("value");
+    currentColorMode = selectedFunction; // Track current mode
     //selectedData = DUMMY_TRACKS.filter(d => d.name != selectedSong);
     switch(selectedFunction) {
         case "Days Since Played":
@@ -700,7 +720,7 @@ d3.select("#selectButton").on("change",function(d) {
             };
             break;
         case "Shows Since Played":
-            colorFunction = function(track) { 
+            colorFunction = function(track) {
                 return colorShowsSincePlayed(track.shows_since_played);
             };
             break;
@@ -718,10 +738,14 @@ d3.select("#selectButton").on("change",function(d) {
             colorFunction = function() { return DEFAULT_COLOR };
     }
 
+    const selectedColor = COLOR_MODE_STYLES[currentColorMode].selected;
     chart.selectAll('.bar')
         .data(selectedData, data => data.track_id)
-        .style("fill", data => {
-            if (data.missing) {
+        .style("fill", function(data) {
+            const isSelected = d3.select(this).classed('selected');
+            if (isSelected) {
+                return selectedColor;
+            } else if (data.missing) {
                 return MISSING_COLOR;
             }
             return colorFunction(data);
@@ -733,17 +757,11 @@ d3.select("#selectButton").on("change",function(d) {
  * @param {string} className - Sanitized song name used as class
  */
 function highlight(className) {
+    const highlightColor = COLOR_MODE_STYLES[currentColorMode].highlight;
     d3.selectAll("." + className)
         .transition()
         .duration(HIGHLIGHT_DURATION)
-        .style('fill', function(data) {
-            // Don't brighten missing tracks
-            // if (data.missing) {
-            //     return MISSING_COLOR;
-            // }
-            const currentColor = d3.select(this).style('fill');
-            return d3.color(currentColor).brighter(HIGHLIGHT_BRIGHTNESS);
-        });
+        .style('fill', highlightColor);
 }
 
 /**
@@ -751,6 +769,7 @@ function highlight(className) {
  * @param {string} className - Sanitized song name used as class
  */
 function toggleSelect(className) {
+    const selectedColor = COLOR_MODE_STYLES[currentColorMode].selected;
     if (d3.selectAll("." + className).classed('selected')) {
         d3.selectAll("." + className).classed('selected', false).style("fill", data => {
             if (data.missing) {
@@ -759,7 +778,7 @@ function toggleSelect(className) {
             return colorFunction(data);
         });
     } else {
-        d3.selectAll("." + className).classed('selected', true).style("fill", SELECTED_COLOR);
+        d3.selectAll("." + className).classed('selected', true).style("fill", selectedColor);
     }
 }
 
@@ -768,6 +787,7 @@ function toggleSelect(className) {
  * @param {string} className - Sanitized song name used as class
  */
 function unHighlight(className) {
+    const selectedColor = COLOR_MODE_STYLES[currentColorMode].selected;
     d3.selectAll("." + className)
         .transition()
         .duration(HIGHLIGHT_DURATION)
@@ -775,7 +795,7 @@ function unHighlight(className) {
             // Check if this element is selected
             const isSelected = d3.select(this).classed('selected');
             if (isSelected) {
-                return SELECTED_COLOR;
+                return selectedColor;
             } else if (data.missing) {
                 return MISSING_COLOR;
             } else {
