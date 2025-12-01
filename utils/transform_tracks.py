@@ -334,6 +334,7 @@ def transform_tracks(tracks, manual_updates=None):
                 "shows_since_played": shows_since,
                 "days_since_played": days_since,
                 "first_date_played": first_date_played,
+                "likes_count": track.get("likes_count", 0),
                 "mp3_url": track.get("mp3_url", ""),
                 "album_cover_url": track.get("show_album_cover_url", "")
             }

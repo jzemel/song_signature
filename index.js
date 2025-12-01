@@ -73,13 +73,14 @@ const SHOWS_SINCE_PLAYED_DOMAIN_MIN = -20;
 const SHOWS_SINCE_PLAYED_DOMAIN_MAX = 80;
 const SONG_AGE_DOMAIN_MIN = 0;
 const SONG_AGE_DOMAIN_MAX = 20;
+const LIKES_COUNT_DOMAIN_MIN = -20;
+const LIKES_COUNT_DOMAIN_MAX = 60;
 const COLOR_SCALE_UNKNOWN = "#e9ecef";
 const X_SCALE_MIN = 0;
 const X_SCALE_MAX = 140;
 const MS_PER_YEAR = 1000 * 60 * 60 * 24 * 365;
 
-const colorOptions = ["None", "Shows Since Played","Song Age"];
-let colorFunction = function() { return DEFAULT_COLOR };
+const colorOptions = ["Shows Since Played", "Song Age", "Likes", "None"];
 
 const colorShowsSincePlayed = d3.scaleSequential()
     .domain([SHOWS_SINCE_PLAYED_DOMAIN_MIN, SHOWS_SINCE_PLAYED_DOMAIN_MAX])
@@ -90,6 +91,13 @@ const colorAge = d3.scaleSequential()
     .domain([SONG_AGE_DOMAIN_MIN, SONG_AGE_DOMAIN_MAX])
     .interpolator(d3.interpolateOranges)
     .unknown(COLOR_SCALE_UNKNOWN);
+
+const colorLikesCount = d3.scaleSequential()
+    .domain([LIKES_COUNT_DOMAIN_MIN, LIKES_COUNT_DOMAIN_MAX])
+    .interpolator(d3.interpolatePurples)
+    .unknown(COLOR_SCALE_UNKNOWN);
+
+let colorFunction = function(track) { return colorShowsSincePlayed(track.shows_since_played); };
 
 const x = d3.scaleLinear().range([0, CHART_WIDTH]);
 x.domain([X_SCALE_MIN, X_SCALE_MAX]);
@@ -148,6 +156,7 @@ function generateTooltipHTML(barData) {
         <div class="tooltip-info">Length: <strong>${Math.round(barData.duration)} min</strong></div>
         <div class="tooltip-info">Shows since played: <strong>${barData.shows_since_played}</strong></div>
         <div class="tooltip-info">1st time played: <strong>${barData.first_date_played}</strong></div>
+        <div class="tooltip-info">Like count: <strong>${barData.likes_count}</strong></div>
         ${phishinUrl ? `
         <div class="tooltip-links">
             <a href="${phishinUrl}" target="_blank">Listen</a>
@@ -308,6 +317,7 @@ function unpackShows(shows) {
                     show_position: track.show_position,
                     shows_since_played: track.shows_since_played,
                     first_date_played: track.first_date_played,
+                    likes_count: track.likes_count || 0,
                     album_cover_url: track.album_cover_url,
                     missing: track.missing,
                     year: track.year,
@@ -691,6 +701,11 @@ d3.select("#selectButton").on("change",function(d) {
         case "Song Age":
             colorFunction = function(track) {
                 return colorAge(Age(track));
+            };
+            break;
+        case "Likes":
+            colorFunction = function(track) {
+                return colorLikesCount(track.likes_count);
             };
             break;
         case "None":
