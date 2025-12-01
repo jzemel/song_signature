@@ -73,8 +73,8 @@ const SHOWS_SINCE_PLAYED_DOMAIN_MIN = -20;
 const SHOWS_SINCE_PLAYED_DOMAIN_MAX = 80;
 const SONG_AGE_DOMAIN_MIN = 0;
 const SONG_AGE_DOMAIN_MAX = 20;
-const LIKES_COUNT_DOMAIN_MIN = -20;
-const LIKES_COUNT_DOMAIN_MAX = 60;
+const LIKES_COUNT_DOMAIN_MIN = -25;
+const LIKES_COUNT_DOMAIN_MAX = 55;
 const COLOR_SCALE_UNKNOWN = "#e9ecef";
 const X_SCALE_MIN = 0;
 const X_SCALE_MAX = 140;
@@ -105,6 +105,7 @@ x.domain([X_SCALE_MIN, X_SCALE_MAX]);
 
 // OTHER PARAMETERS
 let SONG_INDEX = {};
+let songNameIndex = new Map(); // Map<sanitizedName, displayName> for search
 let seasonLabelsByYear = {}; // Store season label positions for each year
 let lastVisibleYear = null; // Track current visible year
 
@@ -335,6 +336,11 @@ function unpackShows(shows) {
                     SONG_INDEX[song_id] = [track.show_id];
                 }
             })
+            // Build search index: Map sanitized name -> display name
+            const sanitizedName = stripForHTML(track.song_name);
+            if (!songNameIndex.has(sanitizedName)) {
+                songNameIndex.set(sanitizedName, track.song_name);
+            }
         });
     }
 
@@ -847,4 +853,87 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') handleCloseModal();
     if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
     if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+});
+
+// Song Search
+const searchInput = document.getElementById('song-search');
+const searchResults = document.getElementById('search-results');
+
+function handleSearchInput(event) {
+    const query = event.target.value.trim().toLowerCase();
+
+    // Clear and hide results if query is empty
+    if (query === '') {
+        searchResults.innerHTML = '';
+        searchResults.classList.remove('active');
+        return;
+    }
+
+    // Filter song names by substring match (case-insensitive)
+    const matches = Array.from(songNameIndex.values())
+        .filter(songName => songName.toLowerCase().includes(query))
+        .sort()
+        .slice(0, 10);
+
+    // Display results
+    if (matches.length > 0) {
+        searchResults.innerHTML = matches
+            .map(songName => `<div class="search-result-item" data-song="${stripForHTML(songName)}">${songName}</div>`)
+            .join('');
+        searchResults.classList.add('active');
+    } else {
+        searchResults.innerHTML = '<div class="search-result-item" style="color: #999; cursor: default;">No matches found</div>';
+        searchResults.classList.add('active');
+    }
+}
+
+searchInput.addEventListener('input', handleSearchInput);
+
+// Hide search results when clicking outside
+document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+        searchResults.classList.remove('active');
+    }
+});
+
+// Show results when clicking back into search input if there's a query
+searchInput.addEventListener('focus', () => {
+    if (searchInput.value.trim() !== '') {
+        handleSearchInput({ target: searchInput });
+    }
+});
+
+// Event delegation for search results hover - reuse highlight() function
+searchResults.addEventListener('mouseover', (e) => {
+    if (e.target.classList.contains('search-result-item')) {
+        const songSlug = e.target.getAttribute('data-song');
+        if (songSlug) {
+            highlight(songSlug);
+        }
+    }
+});
+
+searchResults.addEventListener('mouseout', (e) => {
+    if (e.target.classList.contains('search-result-item')) {
+        const songSlug = e.target.getAttribute('data-song');
+        if (songSlug) {
+            unHighlight(songSlug);
+        }
+    }
+});
+
+// Event delegation for search results click - reuse toggleSelect() function
+searchResults.addEventListener('click', (e) => {
+    if (e.target.classList.contains('search-result-item')) {
+        const songSlug = e.target.getAttribute('data-song');
+        if (songSlug) {
+            toggleSelect(songSlug);
+            // Clear search and hide results after selection
+            searchInput.value = '';
+            searchResults.innerHTML = '';
+            searchResults.classList.remove('active');
+            // Stop propagation to prevent body click handler from deselecting
+            e.stopPropagation();
+        }
+    }
 });

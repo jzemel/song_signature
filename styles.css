@@ -167,6 +167,66 @@ h1 {
     filter: brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(6477%) hue-rotate(343deg) brightness(95%) contrast(98%);
 }
 
+#search-container {
+    position: fixed;
+    top: 21px;
+    right: 60px;
+    z-index: 70;
+}
+
+#song-search {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: var(--background-color);
+    color: #333;
+    width: 200px;
+    outline: none;
+}
+
+#song-search:focus {
+    border-color: #999;
+}
+
+#search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: #fcfcfc;
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    z-index: 80;
+}
+
+#search-results.active {
+    display: block;
+}
+
+.search-result-item {
+    padding: 8px 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: #f4f4f4;
+}
+
 /* Modal */
 .modal {
     display: none;
