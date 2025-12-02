@@ -12,11 +12,11 @@
 <body>
     <div id="controls">
         <h1>When did Phish play that song and for how long?</h1>
-        <script>
+<!--         <script>
             if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
                 document.querySelector('h1').textContent = "Phish setlists doesn't work on mobile - try desktop browser!";
             }
-        </script>
+        </script> -->
         <img id="help-icon" src="images/Icon Help.png" alt="Help" title="WTF is this?">
         <span  id="subtitle">
             Colorcode Songs by
@@ -53,8 +53,24 @@
     <div id="fixed-scrollbar">
         <div id="scrollbar-content"></div>
     </div>
-    <div id="footer">All setlist data from <a href="https://phish.in" target="_blank">Phish.in</a>. Send comments &amp; questions to phish.barcode at gmail.</div>
+    <div id="footer">All setlist data from <a href="https://phish.in" target="_blank">Phish.in</a>. Send comments &amp; questions to phish.barcode at gmail or <a href="https://github.com/jzemel/song_signature" target="_blank">github</a></div>
     <div id="info-icon">i</div>
+    <div id="controls-fab">⚙</div>
+    <div id="controls-panel">
+        <div id="controls-panel-content">
+            <span id="controls-panel-close">&times;</span>
+            <label for="mobile-color-select">Color code</label>
+            <select id="mobile-color-select">
+                <option>Shows Since Played</option>
+                <option>Song Age</option>
+                <option>Likes</option>
+                <option>None</option>
+            </select>
+            <label for="mobile-song-search">Highlight song</label>
+            <input type="text" id="mobile-song-search" placeholder="Type song name">
+            <div id="mobile-search-results"></div>
+        </div>
+    </div>
     <script src="https://d3js.org/d3.v7.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-scale@4" defer></script>
     <script src="index.js" defer></script>

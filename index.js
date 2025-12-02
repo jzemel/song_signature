@@ -49,7 +49,7 @@ const SHOW_SCALE_OVERRIDES = {
 };
 
 // Layout parameters
-const MARGINS = {top: 55, bottom: 20, left: 90};
+const MARGINS = {top: 55, bottom: 20, left: 60};
 const PX_PER_MIN = 2;
 const BAR_WIDTH = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 20 : 16; // Wider on mobile for easier tapping
 const GAP_WIDTH = 10; // Not currently used with x scaling
@@ -1018,6 +1018,82 @@ if (isMobile) {
         if (!footer.contains(e.target) && !infoIcon.contains(e.target)) {
             footer.classList.remove('active');
             scrollbar.classList.remove('footer-visible');
+        }
+    });
+
+    // Mobile controls panel toggle
+    const controlsFab = document.getElementById('controls-fab');
+    const controlsPanel = document.getElementById('controls-panel');
+    const controlsPanelClose = document.getElementById('controls-panel-close');
+    const mobileColorSelect = document.getElementById('mobile-color-select');
+    const mobileSearchInput = document.getElementById('mobile-song-search');
+    const mobileSearchResults = document.getElementById('mobile-search-results');
+
+    controlsFab.addEventListener('click', (e) => {
+        controlsPanel.classList.add('active');
+        e.stopPropagation();
+    });
+
+    controlsPanelClose.addEventListener('click', () => {
+        controlsPanel.classList.remove('active');
+    });
+
+    controlsPanel.addEventListener('click', (e) => {
+        if (e.target === controlsPanel) {
+            controlsPanel.classList.remove('active');
+        }
+    });
+
+    // Sync mobile color select with desktop - trigger same change event
+    mobileColorSelect.value = currentColorMode;
+    mobileColorSelect.addEventListener('change', function() {
+        const value = this.value;
+        currentColorMode = value;
+        document.getElementById('selectButton').value = value;
+        document.getElementById('selectButton').dispatchEvent(new Event('change'));
+    });
+
+    // Mobile search functionality
+    function handleMobileSearchInput(event) {
+        const query = event.target.value.trim().toLowerCase();
+
+        if (query === '') {
+            mobileSearchResults.innerHTML = '';
+            mobileSearchResults.classList.remove('active');
+            return;
+        }
+
+        const matches = Array.from(songNameIndex.values())
+            .filter(songName => songName.toLowerCase().includes(query))
+            .sort()
+            .slice(0, 10);
+
+        if (matches.length > 0) {
+            mobileSearchResults.innerHTML = matches
+                .map(songName => `<div class="search-result-item" data-song="${stripForHTML(songName)}">${songName}</div>`)
+                .join('');
+            mobileSearchResults.classList.add('active');
+        } else {
+            mobileSearchResults.innerHTML = '<div class="search-result-item" style="color: #999; cursor: default;">No matches found</div>';
+            mobileSearchResults.classList.add('active');
+        }
+    }
+
+    mobileSearchInput.addEventListener('input', handleMobileSearchInput);
+
+    // Mobile search results click
+    mobileSearchResults.addEventListener('click', (e) => {
+        if (e.target.classList.contains('search-result-item')) {
+            const songSlug = e.target.getAttribute('data-song');
+            if (songSlug) {
+                toggleSelect(songSlug);
+                mobileSearchInput.value = '';
+                mobileSearchResults.innerHTML = '';
+                mobileSearchResults.classList.remove('active');
+                controlsPanel.classList.remove('active');
+                // Stop propagation to prevent body click handler from deselecting
+                e.stopPropagation();
+            }
         }
     });
 }
