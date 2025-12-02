@@ -472,6 +472,16 @@ h6 {
     text-decoration: underline;
 }
 
+#mobile-bottom-message {
+    display: none;
+    text-align: center;
+    font-size: 12px;
+    color: #999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 30px 20px;
+    line-height: 1.4;
+}
+
 #info-icon {
     display: none;
     position: fixed;
@@ -806,5 +816,9 @@ h6 {
     .search-result-item {
         padding: 12px;
         font-size: 14px;
+    }
+
+    #mobile-bottom-message {
+        display: block;
     }
 }

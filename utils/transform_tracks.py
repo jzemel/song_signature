@@ -5,7 +5,16 @@ from collections import defaultdict
 # Configuration
 INPUT_FILE = "data/tracks_raw.json"
 OUTPUT_FILE = "data/shows.json"
+OUTPUT_DIR = "data/chunks"
 MANUAL_UPDATE_FILE = "data/manual_update_record.txt"
+
+# Chunk definitions by year
+CHUNKS = {
+    '1.0': lambda year: year <= 2000,
+    '2.0': lambda year: 2002 <= year <= 2004,
+    '3.0': lambda year: 2009 <= year <= 2020,
+    '4.0': lambda year: year >= 2021
+}
 
 def load_manual_updates(filename):
     """
@@ -355,14 +364,50 @@ def transform_tracks(tracks, manual_updates=None):
 
 def save_shows(shows_data, filename):
     """
-    Save transformed show data to JSON file.
+    Save transformed show data to JSON file and chunked files.
+    Creates both the original single file and 4 chunked files by year.
     """
-    print(f"\nSaving to {filename}...")
-    
+    import os
+
+    # Save original single file
+    print(f"\nSaving complete file to {filename}...")
     with open(filename, 'w') as f:
         json.dump(shows_data, f, indent=2)
-    
     print(f"Saved successfully!")
+
+    # Create chunks directory
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    # Initialize chunk dictionaries
+    chunks = {chunk_id: {} for chunk_id in CHUNKS.keys()}
+
+    # Distribute shows to chunks based on year
+    for show_id, show_data in shows_data.items():
+        if show_data['tracks']:
+            year = show_data['tracks'][0]['year']
+
+            # Determine which chunk this show belongs to
+            for chunk_id, year_filter in CHUNKS.items():
+                if year_filter(year):
+                    chunks[chunk_id][show_id] = show_data
+                    break
+
+    # Save chunk files and report statistics
+    print(f"\nCreating chunked files in {OUTPUT_DIR}/...")
+    for chunk_id, chunk_data in chunks.items():
+        chunk_file = os.path.join(OUTPUT_DIR, f'shows_{chunk_id}.json')
+
+        with open(chunk_file, 'w') as f:
+            json.dump(chunk_data, f, separators=(',', ':'))
+
+        # Calculate statistics
+        file_size_mb = os.path.getsize(chunk_file) / (1024 * 1024)
+        num_shows = len(chunk_data)
+        num_tracks = sum(len(show['tracks']) for show in chunk_data.values())
+        years = sorted(set(track['year'] for show in chunk_data.values() for track in show['tracks']))
+        year_range = f"{min(years)}-{max(years)}" if years else "empty"
+
+        print(f'  Chunk {chunk_id}: {file_size_mb:.2f} MB, {num_shows} shows, {num_tracks} tracks, years {year_range}')
 
 def main(test_mode=False):
     """

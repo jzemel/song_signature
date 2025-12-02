@@ -5,12 +5,30 @@ let allTracks;
 
 const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
 const USE_LOCAL_DATA_FOR_DEV = true;
-const SHOWS_URL = (isLocal && USE_LOCAL_DATA_FOR_DEV) 
-    ? "/data/shows.json" 
-    : "https://jzemel.github.io/song_signature/data/shows.json";
+
+// Mobile detection (used for data loading)
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// Load appropriate chunk based on device
+const CHUNK_VERSION = isMobile ? '4.0' : 'all';
+const SHOWS_FILENAME = CHUNK_VERSION === 'all' ? 'shows.json' : `chunks/shows_${CHUNK_VERSION}.json`;
+const SHOWS_URL = (isLocal && USE_LOCAL_DATA_FOR_DEV)
+    ? `/data/${SHOWS_FILENAME}`
+    : `https://jzemel.github.io/song_signature/data/${SHOWS_FILENAME}`;
 
 // Magic phish knowledge constants
-const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
+const YEARS_ALL = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
+
+// Chunk year ranges
+const CHUNK_YEARS = {
+    '1.0': [2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989, 1988, 1987, 1986, 1985, 1984, 1983],
+    '2.0': [2004, 2003, 2002],
+    '3.0': [2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009],
+    '4.0': [2025, 2024, 2023, 2022, 2021],
+    'all': YEARS_ALL
+};
+
+const YEARS = CHUNK_YEARS[CHUNK_VERSION];
 const SHOW_SETS = ["1","2", "3", "E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
 const SHOW_SCALE_OVERRIDES = {
     // Long shows that need vertical compression to fit standard bounds
@@ -152,8 +170,6 @@ let songNameIndex = new Map(); // Map<sanitizedName, displayName> for search
 let seasonLabelsByYear = {}; // Store season label positions for each year
 let lastVisibleYear = null; // Track current visible year
 
-// Mobile detection
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 
 const chartContainer = d3
