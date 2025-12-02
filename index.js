@@ -51,7 +51,7 @@ const SHOW_SCALE_OVERRIDES = {
 // Layout parameters
 const MARGINS = {top: 55, bottom: 20, left: 90};
 const PX_PER_MIN = 2;
-const BAR_WIDTH = 16;
+const BAR_WIDTH = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 20 : 16; // Wider on mobile for easier tapping
 const GAP_WIDTH = 10; // Not currently used with x scaling
 const SET_HEIGHT_MINUTES = 105;
 const E_HEIGHT_MINUTES = 35;
@@ -152,6 +152,9 @@ let songNameIndex = new Map(); // Map<sanitizedName, displayName> for search
 let seasonLabelsByYear = {}; // Store season label positions for each year
 let lastVisibleYear = null; // Track current visible year
 
+// Mobile detection
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 
 const chartContainer = d3
     .select('svg')
@@ -236,38 +239,41 @@ function calculateBarHeight(data) {
 }
 
 // Event delegation - attach listeners once to parent chart instead of every bar
-chart.on('mouseover', function(event) {
-    const target = event.target;
-    if (!target.classList.contains('bar')) return;
+// Desktop: hover shows tooltip + highlight
+if (!isMobile) {
+    chart.on('mouseover', function(event) {
+        const target = event.target;
+        if (!target.classList.contains('bar')) return;
 
-    // If tooltip is pinned, don't update on hover
-    if (pinnedTooltip !== null) return;
+        // If tooltip is pinned, don't update on hover
+        if (pinnedTooltip !== null) return;
 
-    const barElement = d3.select(target);
-    const barData = barElement.datum();
+        const barElement = d3.select(target);
+        const barData = barElement.datum();
 
-    const songName = barElement.attr("name");
-    highlight(songName);
-    TOOLTIP.transition().duration(TOOLTIP_SHOW_DURATION).style('opacity','1');
-    TOOLTIP.style("transform", `translate(${event.clientX + TOOLTIP_OFFSET_X}px, ${event.clientY + TOOLTIP_OFFSET_Y}px)`);
+        const songName = barElement.attr("name");
+        highlight(songName);
+        TOOLTIP.transition().duration(TOOLTIP_SHOW_DURATION).style('opacity','1');
+        TOOLTIP.style("transform", `translate(${event.clientX + TOOLTIP_OFFSET_X}px, ${event.clientY + TOOLTIP_OFFSET_Y}px)`);
 
-    const tooltipHTML = generateTooltipHTML(barData);
-    TOOLTIP.html(tooltipHTML);
-});
+        const tooltipHTML = generateTooltipHTML(barData);
+        TOOLTIP.html(tooltipHTML);
+    });
 
-chart.on('mouseout', function(event) {
-    const target = event.target;
-    if (!target.classList.contains('bar')) return;
+    chart.on('mouseout', function(event) {
+        const target = event.target;
+        if (!target.classList.contains('bar')) return;
 
-    const barElement = d3.select(target);
-    const songName = barElement.attr("name");
-    unHighlight(songName);
+        const barElement = d3.select(target);
+        const songName = barElement.attr("name");
+        unHighlight(songName);
 
-    // Only hide tooltip if this bar is not selected AND tooltip is not pinned
-    if (!barElement.classed('selected') && pinnedTooltip === null) {
-        TOOLTIP.transition().duration(TOOLTIP_FADE_DURATION).style('opacity',0);
-    }
-});
+        // Only hide tooltip if this bar is not selected AND tooltip is not pinned
+        if (!barElement.classed('selected') && pinnedTooltip === null) {
+            TOOLTIP.transition().duration(TOOLTIP_FADE_DURATION).style('opacity',0);
+        }
+    });
+}
 
 chart.on('click', function(event) {
     const target = event.target;
@@ -286,6 +292,17 @@ chart.on('click', function(event) {
     } else {
         // Otherwise select it and keep tooltip visible (pin it)
         toggleSelect(songName);
+
+        // Show tooltip with content (important for mobile)
+        const tooltipHTML = generateTooltipHTML(barData);
+        TOOLTIP.html(tooltipHTML);
+        TOOLTIP.transition().duration(TOOLTIP_SHOW_DURATION).style('opacity','1');
+
+        // On desktop, position near cursor; on mobile, CSS handles bottom-fixed positioning
+        if (!isMobile) {
+            TOOLTIP.style("transform", `translate(${event.clientX + TOOLTIP_OFFSET_X}px, ${event.clientY + TOOLTIP_OFFSET_Y}px)`);
+        }
+
         TOOLTIP.classed('pinned', true);
         pinnedTooltip = barData.track_id;
     }
@@ -947,24 +964,26 @@ searchInput.addEventListener('focus', () => {
     }
 });
 
-// Event delegation for search results hover - reuse highlight() function
-searchResults.addEventListener('mouseover', (e) => {
-    if (e.target.classList.contains('search-result-item')) {
-        const songSlug = e.target.getAttribute('data-song');
-        if (songSlug) {
-            highlight(songSlug);
+// Event delegation for search results hover - reuse highlight() function (desktop only)
+if (!isMobile) {
+    searchResults.addEventListener('mouseover', (e) => {
+        if (e.target.classList.contains('search-result-item')) {
+            const songSlug = e.target.getAttribute('data-song');
+            if (songSlug) {
+                highlight(songSlug);
+            }
         }
-    }
-});
+    });
 
-searchResults.addEventListener('mouseout', (e) => {
-    if (e.target.classList.contains('search-result-item')) {
-        const songSlug = e.target.getAttribute('data-song');
-        if (songSlug) {
-            unHighlight(songSlug);
+    searchResults.addEventListener('mouseout', (e) => {
+        if (e.target.classList.contains('search-result-item')) {
+            const songSlug = e.target.getAttribute('data-song');
+            if (songSlug) {
+                unHighlight(songSlug);
+            }
         }
-    }
-});
+    });
+}
 
 // Event delegation for search results click - reuse toggleSelect() function
 searchResults.addEventListener('click', (e) => {
@@ -981,3 +1000,24 @@ searchResults.addEventListener('click', (e) => {
         }
     }
 });
+
+// Mobile footer toggle (info icon)
+if (isMobile) {
+    const infoIcon = document.getElementById('info-icon');
+    const footer = document.getElementById('footer');
+    const scrollbar = document.getElementById('fixed-scrollbar');
+
+    infoIcon.addEventListener('click', (e) => {
+        footer.classList.add('active');
+        scrollbar.classList.add('footer-visible');
+        e.stopPropagation();
+    });
+
+    // Hide footer when clicking anywhere else
+    document.addEventListener('click', (e) => {
+        if (!footer.contains(e.target) && !infoIcon.contains(e.target)) {
+            footer.classList.remove('active');
+            scrollbar.classList.remove('footer-visible');
+        }
+    });
+}

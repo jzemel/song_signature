@@ -471,3 +471,174 @@ h6 {
     color: #333;
     text-decoration: underline;
 }
+
+#info-icon {
+    display: none;
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    width: 32px;
+    height: 32px;
+    background: #C8102E;
+    border-radius: 50%;
+    color: white;
+    font-family: Georgia, serif;
+    font-size: 20px;
+    font-weight: bold;
+    font-style: italic;
+    line-height: 32px;
+    text-align: center;
+    cursor: pointer;
+    z-index: 150;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 24px;
+        margin-bottom: 12px;
+        padding: 0 10px;
+    }
+
+    #controls {
+        padding: 10px;
+        padding-bottom: 15px;
+    }
+
+    #subtitle {
+        display: block;
+        margin-bottom: 10px;
+        text-align: left;
+        padding: 0 10px;
+    }
+
+    #selectButton {
+        width: 100%;
+        max-width: 300px;
+        font-size: 16px; /* Prevent iOS zoom on focus */
+        padding: 10px 32px 10px 12px;
+    }
+
+    #search-container {
+        position: relative;
+        top: auto;
+        right: auto;
+        width: 100%;
+        max-width: 300px;
+        margin: 10px 0 0 10px;
+    }
+
+    #song-search {
+        width: 100%;
+        font-size: 16px; /* Prevent iOS zoom on focus */
+        padding: 10px 12px;
+    }
+
+    #help-icon {
+        width: 32px;
+        height: 32px;
+        top: 15px;
+        right: 15px;
+    }
+
+    #sticky-season-labels {
+        font-size: 10px;
+    }
+
+    .sticky-season-label {
+        font-size: 10px;
+    }
+
+    .fixed-year-label {
+        font-size: 14px;
+        width: 60px;
+        right: 10px;
+    }
+
+    .fixed-set-label {
+        font-size: 11px;
+        width: 60px;
+        right: 10px;
+    }
+
+    #labels-container {
+        width: 70px;
+    }
+
+    #fixed-scrollbar {
+        left: 70px;
+        bottom: 0;
+        transition: bottom 0.2s ease;
+    }
+
+    #fixed-scrollbar.footer-visible {
+        bottom: 30px;
+    }
+
+    .tooltip-donut {
+        position: fixed !important;
+        bottom: 40px !important;
+        top: auto !important;
+        left: 10px !important;
+        right: auto !important;
+        transform: none !important;
+        max-width: calc(100vw - 20px);
+        min-width: 0;
+        width: auto;
+        height: auto;
+        padding: 6px 8px;
+        line-height: 1.2;
+    }
+
+    .tooltip-song-name {
+        font-size: 12px;
+        margin: 0 0 2px 0;
+        line-height: 1.2;
+    }
+
+    .tooltip-date-venue {
+        font-size: 11px;
+        margin: 2px 0;
+        line-height: 1.2;
+    }
+
+    .tooltip-info {
+        font-size: 10px;
+        margin: 1px 0;
+        line-height: 1.2;
+    }
+
+    .tooltip-album-cover {
+        display: none;
+    }
+
+    .tooltip-links {
+        margin-top: 3px;
+        padding-top: 3px;
+    }
+
+    .tooltip-links a {
+        font-size: 11px;
+    }
+
+    #footer {
+        font-size: 10px;
+        display: none;
+        z-index: 200;
+    }
+
+    #footer.active {
+        display: block;
+    }
+
+    #info-icon {
+        display: block;
+    }
+
+    /* Increase touch target size */
+    .search-result-item {
+        padding: 12px;
+        font-size: 14px;
+    }
+}
