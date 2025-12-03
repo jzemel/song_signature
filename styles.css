@@ -167,12 +167,11 @@ h1 {
 #help-icon {
     position: fixed;
     top: 15px;
-    right: 15px;
-    width: 32px;
-    height: 32px;
+    right: 10px;
+    width: 37px;
+    height: 37px;
     cursor: pointer;
     z-index: 70;
-    filter: brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(6477%) hue-rotate(343deg) brightness(95%) contrast(98%);
 }
 
 #search-container {
@@ -486,21 +485,11 @@ h6 {
     display: none;
     position: fixed;
     bottom: 15px;
-    right: 15px;
-    width: 32px;
-    height: 32px;
-    background: #C8102E;
-    border-radius: 50%;
-    color: white;
-    font-family: Georgia, serif;
-    font-size: 20px;
-    font-weight: bold;
-    font-style: italic;
-    line-height: 32px;
-    text-align: center;
+    right: 10px;
+    width: 37px;
+    height: 37px;
     cursor: pointer;
     z-index: 150;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 #controls-fab {
@@ -508,17 +497,10 @@ h6 {
     position: fixed;
     bottom: 15px;
     left: 15px;
-    width: 32px;
-    height: 32px;
-    background: #C8102E;
-    border-radius: 50%;
-    color: white;
-    font-size: 20px;
-    line-height: 32px;
-    text-align: center;
+    width: 37px;
+    height: 37px;
     cursor: pointer;
     z-index: 150;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 #controls-panel {
@@ -706,10 +688,7 @@ h6 {
     }
 
     #fixed-scrollbar {
-        left: 50px;
-        bottom: 0;
-        transition: bottom 0.2s ease;
-        height: 15px;
+        display: none;
     }
 
     #scrollbar-content {
@@ -784,26 +763,22 @@ h6 {
         display: block;
         bottom: 10px;
         left: 10px;
-        width: 28px;
-        height: 28px;
-        font-size: 18px;
-        line-height: 28px;
+        width: 32px;
+        height: 32px;
     }
 
     #info-icon {
         bottom: 10px;
-        right: 10px;
-        width: 28px;
-        height: 28px;
-        font-size: 18px;
-        line-height: 28px;
+        right: 5px;
+        width: 32px;
+        height: 32px;
     }
 
     #help-icon {
         top: 10px;
-        right: 10px;
-        width: 28px;
-        height: 28px;
+        right: 5px;
+        width: 32px;
+        height: 32px;
     }
 
     #footer {
