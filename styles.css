@@ -688,15 +688,11 @@ h6 {
     }
 
     #fixed-scrollbar {
-        display: none;
+        display: none !important;
     }
 
     #scrollbar-content {
-        height: 1px;
-    }
-
-    #fixed-scrollbar.footer-visible {
-        bottom: 24px;
+        display: none;
     }
 
     .tooltip-donut {
