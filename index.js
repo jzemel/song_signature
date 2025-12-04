@@ -7,9 +7,12 @@ const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname
 const USE_LOCAL_DATA_FOR_DEV = true;
 
 const SHOWS_FILENAME = C.CHUNK_VERSION === 'all' ? 'shows.json' : `chunks/shows_${C.CHUNK_VERSION}.json`;
-const SHOWS_URL = (isLocal && USE_LOCAL_DATA_FOR_DEV)
-    ? `/data/${SHOWS_FILENAME}`
-    : `${window.location.hostname}/data/${SHOWS_FILENAME}`;
+const SHOWS_URL = isLocal
+    ? (USE_LOCAL_DATA_FOR_DEV
+        ? `/data/${SHOWS_FILENAME}`
+        : `https://phishgraphs.com/data/${SHOWS_FILENAME}`)
+    : `https://${window.location.hostname}/data/${SHOWS_FILENAME}`;
+
 
 // ============================================================================
 // STATE MANAGEMENT
