@@ -1,206 +1,148 @@
-let selectedData;
-let allTracks;
-
-// LAYOUT PARAMETERS
+// ============================================================================
+// IMPORTS & CONFIGURATION
+// ============================================================================
+import * as C from './constants.js';
 
 const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
 const USE_LOCAL_DATA_FOR_DEV = true;
 
-// Mobile detection (used for data loading)
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-// Load appropriate chunk based on device
-const CHUNK_VERSION = isMobile ? '4.0' : 'all';
-const SHOWS_FILENAME = CHUNK_VERSION === 'all' ? 'shows.json' : `chunks/shows_${CHUNK_VERSION}.json`;
+const SHOWS_FILENAME = C.CHUNK_VERSION === 'all' ? 'shows.json' : `chunks/shows_${C.CHUNK_VERSION}.json`;
 const SHOWS_URL = (isLocal && USE_LOCAL_DATA_FOR_DEV)
     ? `/data/${SHOWS_FILENAME}`
     : `https://jzemel.github.io/song_signature/data/${SHOWS_FILENAME}`;
 
-// Magic phish knowledge constants
-const YEARS_ALL = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2004, 2003, 2002, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,1988,1987,1986,1985,1984];
+// ============================================================================
+// STATE MANAGEMENT
+// ============================================================================
+let selectedData;
+let allTracks;
+let colorFunction = function(track) { return colorShowsSincePlayed(track.shows_since_played); };
+let currentColorMode = "Shows Since Played";
+let pinnedTooltip = null; // Track ID of pinned tooltip
+let songIndex = {}; // Maps song_id to array of show_ids
+let songNameIndex = new Map(); // Maps sanitized song name to display name
+let seasonLabelsByYear = {}; // Season label positions by year
+let lastVisibleYear = null; // Currently visible year for sticky labels
 
-// Chunk year ranges
-const CHUNK_YEARS = {
-    '1.0': [2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989, 1988, 1987, 1986, 1985, 1984, 1983],
-    '2.0': [2004, 2003, 2002],
-    '3.0': [2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009],
-    '4.0': [2025, 2024, 2023, 2022, 2021],
-    'all': YEARS_ALL
-};
-
-const YEARS = CHUNK_YEARS[CHUNK_VERSION];
-const SHOW_SETS = ["1","2", "3", "E"]; //which sets are to be included (hides any set 4s or E2s for simplicity)
-const SHOW_SCALE_OVERRIDES = {
-    // Long shows that need vertical compression to fit standard bounds
-    // TODO replace E with set number in data transformation
-    '2024-12-31': 0.7,
-    '2024-08-16': 0.95,
-    '2024-04-18': 0.95,
-    '2023-12-31': 0.7,
-    '2022-04-22': 0.7,
-    '2022-12-31': 0.7,
-    '2021-12-31': 0.7,
-    '2019-12-31': 0.7,
-    '2018-12-31': 0.7,
-    '2017-12-31': 0.7,
-    '2016-12-31': 0.7,
-    '2015-12-31': 0.7,
-    '2014-12-31': 0.7,
-    '2013-12-31': 0.7,
-    '2012-12-31': 0.7,
-    '2011-12-31': 0.7,
-    '2010-12-31': 0.7,
-    '2009-12-31': 0.7,
-    '2003-12-31': 0.7,
-    '2002-12-31': 0.7,
-    '1999-12-31': 0.45,
-    '1999-12-30': 0.7,
-    '1998-12-30': 0.7,
-    '1997-12-30': 0.7,
-    '1996-12-30': 0.7,
-    '1995-12-30': 0.7,
-    '1994-12-30': 0.7,
-    '1993-12-30': 0.7,
-    '1992-12-30': 0.7,
-    '1991-12-30': 0.7,
-    // '1998-04-03': 0.7,
-};
-
-// Layout parameters
-const MARGINS = {top: 55, bottom: 20, left: 60};
-const PX_PER_MIN = 2;
-const BAR_WIDTH = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 20 : 16; // Wider on mobile for easier tapping
-const GAP_WIDTH = 10; // Not currently used with x scaling
-const SET_HEIGHT_MINUTES = 105;
-const E_HEIGHT_MINUTES = 35;
-const YEAR_HEIGHT = 2 * SET_HEIGHT_MINUTES + E_HEIGHT_MINUTES + 20;
-const CHART_WIDTH = 3600;
-const CHART_HEIGHT = (YEAR_HEIGHT * YEARS.length) * PX_PER_MIN + 100;
-
-// Sticky element positioning (matches CSS values)
-const CONTROLS_HEIGHT = 80; // Approximate height of controls sticky element
-const CONTROLS_PADDING_BOTTOM = 10; // Padding below controls
-const STICKY_SEASON_LABELS_TOP = CONTROLS_HEIGHT + CONTROLS_PADDING_BOTTOM; // 90px - positions below controls
-const STICKY_SEASON_LABELS_HEIGHT = 30;
-const CHART_WRAPPER_MARGIN_TOP = -MARGINS.top; // -55px - pull chart up to align with sticky labels
-
-
-const DEFAULT_COLOR = "#f4a261";  // Softer orange
-const MISSING_COLOR = "#e9ecef";
-const MISSING_DURATION = 8.5; // minutes
-
-// Color mode-specific highlight and selected colors
-const COLOR_MODE_STYLES = {
-    "None": {
-        highlight: "#ffdb83",  // Brightened orange (matches old brighten effect)
-        selected: "#2589BD"    // Ocean blue
-    },
-    "Shows Since Played": {
-        highlight: "#ff1493",  // Deep pink (outside YlGnBu gradient)
-        selected: "#91171F"    // Deep crimson
-    },
-    "Song Age": {
-        highlight: "#00d4ff",  // Bright cyan (outside Oranges gradient)
-        selected: "#0099ff"    // Vivid blue
-    },
-    "Likes": {
-        highlight: "#F39C6B",  // Tangerine dream (outside Purples gradient)
-        selected: "#DD8E61"    // Toasted almond (alt: FFF05A, 482728)
-    }
-};
-
-// Magic number constants
-const BAR_STROKE_COLOR = "#fafafa";
-const BAR_STROKE_WIDTH = 1.8;
-const BAR_BORDER_RADIUS = 1;
-const TOOLTIP_OFFSET_X = 5;
-const TOOLTIP_OFFSET_Y = -5;
-const TOOLTIP_FADE_DURATION = 200;
-const TOOLTIP_SHOW_DURATION = 50;
-const HIGHLIGHT_DURATION = 0;
-const YEAR_DIVIDER_OFFSET_X = -10;
-const YEAR_DIVIDER_OFFSET_Y = -15;
-const YEAR_DIVIDER_COLOR = '#e0e0e0';
-const YEAR_DIVIDER_WIDTH = 1;
-const YEAR_DIVIDER_OPACITY = 0.5;
-const YEAR_LABEL_OFFSET_X = -15;
-const YEAR_LABEL_OFFSET_Y = 20;
-const SET_LABEL_OFFSET_X = -15;
-const SET_LABEL_OFFSET_Y = 10;
-const SEASON_DIVIDER_COLOR = '#d0d0d0';
-const SEASON_DIVIDER_OPACITY = 0.4;
-const SHOWS_SINCE_PLAYED_DOMAIN_MIN = -20;
-const SHOWS_SINCE_PLAYED_DOMAIN_MAX = 80;
-const SONG_AGE_DOMAIN_MIN = 0;
-const SONG_AGE_DOMAIN_MAX = 20;
-const LIKES_COUNT_DOMAIN_MIN = -25;
-const LIKES_COUNT_DOMAIN_MAX = 55;
-const COLOR_SCALE_UNKNOWN = "#e9ecef";
-const X_SCALE_MIN = 0;
-const X_SCALE_MAX = 140;
-const MS_PER_YEAR = 1000 * 60 * 60 * 24 * 365;
-
-const colorOptions = ["Shows Since Played", "Song Age", "Likes", "None"];
-
+// ============================================================================
+// D3 SCALES & COLOR FUNCTIONS
+// ============================================================================
 const colorShowsSincePlayed = d3.scaleSequential()
-    .domain([SHOWS_SINCE_PLAYED_DOMAIN_MIN, SHOWS_SINCE_PLAYED_DOMAIN_MAX])
+    .domain([C.SHOWS_SINCE_PLAYED_DOMAIN_MIN, C.SHOWS_SINCE_PLAYED_DOMAIN_MAX])
     .interpolator(d3.interpolateYlGnBu)
-    .unknown(COLOR_SCALE_UNKNOWN);
+    .unknown(C.COLOR_SCALE_UNKNOWN);
 
 const colorAge = d3.scaleSequential()
-    .domain([SONG_AGE_DOMAIN_MIN, SONG_AGE_DOMAIN_MAX])
+    .domain([C.SONG_AGE_DOMAIN_MIN, C.SONG_AGE_DOMAIN_MAX])
     .interpolator(d3.interpolateOranges)
-    .unknown(COLOR_SCALE_UNKNOWN);
+    .unknown(C.COLOR_SCALE_UNKNOWN);
 
 const colorLikesCount = d3.scaleSequential()
-    .domain([LIKES_COUNT_DOMAIN_MIN, LIKES_COUNT_DOMAIN_MAX])
+    .domain([C.LIKES_COUNT_DOMAIN_MIN, C.LIKES_COUNT_DOMAIN_MAX])
     .interpolator(d3.interpolatePurples)
-    .unknown(COLOR_SCALE_UNKNOWN);
+    .unknown(C.COLOR_SCALE_UNKNOWN);
 
-let colorFunction = function(track) { return colorShowsSincePlayed(track.shows_since_played); };
-let currentColorMode = "Shows Since Played"; // Track current color mode for highlight/selected colors
+const xScale = d3.scaleLinear()
+    .range([0, C.CHART_WIDTH])
+    .domain([C.X_SCALE_MIN, C.X_SCALE_MAX]);
 
-const x = d3.scaleLinear().range([0, CHART_WIDTH]);
-x.domain([X_SCALE_MIN, X_SCALE_MAX]);
-
-
-// OTHER PARAMETERS
-let SONG_INDEX = {};
-let songNameIndex = new Map(); // Map<sanitizedName, displayName> for search
-let seasonLabelsByYear = {}; // Store season label positions for each year
-let lastVisibleYear = null; // Track current visible year
-
-
-
+// ============================================================================
+// DOM ELEMENTS & D3 SELECTIONS
+// ============================================================================
 const chartContainer = d3
     .select('svg')
-    .attr('width', CHART_WIDTH)
-    .attr('height', CHART_HEIGHT)
+    .attr('width', C.CHART_WIDTH)
+    .attr('height', C.CHART_HEIGHT)
     .style('background-color', '#fafafa');
 
-const chart = chartContainer.append('g'); //group of chart elements
+const chart = chartContainer.append('g');
 
-// Sync scrolling between fixed scrollbar and chart
 const svgContainer = document.getElementById('svg-container');
 const fixedScrollbar = document.getElementById('fixed-scrollbar');
 
-svgContainer.addEventListener('scroll', () => {
-    fixedScrollbar.scrollLeft = svgContainer.scrollLeft;
-});
+const tooltip = d3.select(".tooltip-donut")
+    .style("opacity", 0)
+    .on('click', (event) => event.stopPropagation());
 
-fixedScrollbar.addEventListener('scroll', () => {
-    svgContainer.scrollLeft = fixedScrollbar.scrollLeft;
-});
+// ============================================================================
+// HELPER FUNCTIONS - Date & Season
+// ============================================================================
 
-var TOOLTIP = d3.select(".tooltip-donut")
-     .style("opacity", 0)
-     .on('click', function(event) {
-         // Stop propagation so clicking tooltip doesn't hide it
-         event.stopPropagation();
-     });
+/**
+ * Get season information from a date string
+ * @param {string} datestr - Date string in YYYY-MM-DD format
+ * @returns {Object} Object with season name and index (0-4)
+ */
+function getSeasonInfo(datestr) {
+    const date = new Date(datestr);
+    const month = date.getMonth(); // 0-11
 
-// Track if tooltip is pinned to a selected bar
-var pinnedTooltip = null;
+    // Winter1: Jan-Feb, Spring: Mar-May, Summer: Jun-Aug, Fall: Sep-Nov, Winter2: Dec
+    if (month <= 1) return { season: 'winter1', season_index: 0 };
+    if (month <= 4) return { season: 'spring', season_index: 1 };
+    if (month <= 7) return { season: 'summer', season_index: 2 };
+    if (month <= 10) return { season: 'fall', season_index: 3 };
+    return { season: 'winter2', season_index: 4 };
+}
+
+/**
+ * Calculate the age of a song in years
+ * @param {Object} track - Track object with first_date_played property
+ * @returns {number} Age in years
+ */
+function calculateSongAge(track) {
+    const ageMs = Date.now() - new Date(track.first_date_played);
+    return ageMs / C.MS_PER_YEAR;
+}
+
+// ============================================================================
+// HELPER FUNCTIONS - Positioning & Layout
+// ============================================================================
+
+/**
+ * Calculate the Y position for a bar based on track data
+ * @param {Object} data - Track data object
+ * @returns {number} Y coordinate in pixels
+ */
+function calculateBarY(data) {
+    if (data.missing === true) {
+        return ((C.YEARS.indexOf(data.year)) * C.YEAR_HEIGHT + (data.position - 1) * C.MISSING_DURATION) * C.PX_PER_MIN + C.MARGINS.top;
+    }
+    if (data.datestr in C.SHOW_SCALE_OVERRIDES) {
+        const scale = C.SHOW_SCALE_OVERRIDES[data.datestr];
+        return ((C.YEARS.indexOf(data.year)) * C.YEAR_HEIGHT + (parseInt(data.set.replace("E", 4)) - 1) * C.SET_HEIGHT_MINUTES * scale + data.start_time * scale) * C.PX_PER_MIN + C.MARGINS.top;
+    }
+    return ((C.YEARS.indexOf(data.year)) * C.YEAR_HEIGHT + (parseInt(data.set.replace("E", 3)) - 1) * C.SET_HEIGHT_MINUTES + data.start_time) * C.PX_PER_MIN + C.MARGINS.top;
+}
+
+/**
+ * Calculate the height for a bar based on track data
+ * @param {Object} data - Track data object
+ * @returns {number} Height in pixels
+ */
+function calculateBarHeight(data) {
+    const scale = C.SHOW_SCALE_OVERRIDES[data.datestr] || 1.0;
+    const duration = data.missing ? C.MISSING_DURATION : data.duration;
+    return duration * C.PX_PER_MIN * scale;
+}
+
+/**
+ * Calculate which year is currently visible at the top of the viewport
+ * @returns {number} The year currently at the top
+ */
+function calculateVisibleYear() {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const checkPositionInViewport = C.STICKY_SEASON_LABELS_TOP + C.STICKY_SEASON_LABELS_HEIGHT;
+    const absolutePosition = scrollTop + checkPositionInViewport;
+    const positionInChartData = absolutePosition + C.CHART_WRAPPER_MARGIN_TOP - C.MARGINS.top;
+    const yearIndex = Math.floor(positionInChartData / (C.YEAR_HEIGHT * C.PX_PER_MIN));
+    const clampedIndex = Math.max(0, Math.min(yearIndex, C.YEARS.length - 1));
+    return C.YEARS[clampedIndex];
+}
+
+// ============================================================================
+// HELPER FUNCTIONS - UI & Interaction
+// ============================================================================
 
 /**
  * Generate HTML content for the tooltip
@@ -229,464 +171,63 @@ function generateTooltipHTML(barData) {
 }
 
 /**
- * Calculate the Y position for a bar based on track data
- * @param {Object} data - Track data object
- * @returns {number} Y coordinate in pixels
+ * Highlight all bars with the same song name
+ * @param {string} className - Sanitized song name used as class
  */
-function calculateBarY(data) {
-    if (data.missing === true) {
-        return ((YEARS.indexOf(data.year)) * YEAR_HEIGHT + (data.position - 1) * MISSING_DURATION) * PX_PER_MIN + MARGINS.top;
-    } if (data.datestr in SHOW_SCALE_OVERRIDES) {
-        const scale = SHOW_SCALE_OVERRIDES[data.datestr]
-        return ((YEARS.indexOf(data.year)) * YEAR_HEIGHT + (parseInt(data.set.replace("E", 4)) - 1) * SET_HEIGHT_MINUTES * scale + data.start_time * scale) * PX_PER_MIN + MARGINS.top;    
-    }
-    return ((YEARS.indexOf(data.year)) * YEAR_HEIGHT + (parseInt(data.set.replace("E", 3)) - 1) * SET_HEIGHT_MINUTES + data.start_time) * PX_PER_MIN + MARGINS.top;
+function highlight(className) {
+    const highlightColor = C.COLOR_MODE_STYLES[currentColorMode].highlight;
+    d3.selectAll("." + className)
+        .transition()
+        .duration(C.HIGHLIGHT_DURATION)
+        .style('fill', highlightColor);
 }
 
 /**
- * Calculate the height for a bar based on track data
- * @param {Object} data - Track data object
- * @returns {number} Height in pixels
+ * Remove highlight from all bars with the same song name
+ * @param {string} className - Sanitized song name used as class
  */
-function calculateBarHeight(data) {
-    const scale = SHOW_SCALE_OVERRIDES[data.datestr] || 1.0;
-    const duration = data.missing ? MISSING_DURATION : data.duration;
-    return duration * PX_PER_MIN * scale;
-}
-
-// Event delegation - attach listeners once to parent chart instead of every bar
-// Desktop: hover shows tooltip + highlight
-if (!isMobile) {
-    chart.on('mouseover', function(event) {
-        const target = event.target;
-        if (!target.classList.contains('bar')) return;
-
-        // If tooltip is pinned, don't update on hover
-        if (pinnedTooltip !== null) return;
-
-        const barElement = d3.select(target);
-        const barData = barElement.datum();
-
-        const songName = barElement.attr("name");
-        highlight(songName);
-        TOOLTIP.transition().duration(TOOLTIP_SHOW_DURATION).style('opacity','1');
-        TOOLTIP.style("transform", `translate(${event.clientX + TOOLTIP_OFFSET_X}px, ${event.clientY + TOOLTIP_OFFSET_Y}px)`);
-
-        const tooltipHTML = generateTooltipHTML(barData);
-        TOOLTIP.html(tooltipHTML);
-    });
-
-    chart.on('mouseout', function(event) {
-        const target = event.target;
-        if (!target.classList.contains('bar')) return;
-
-        const barElement = d3.select(target);
-        const songName = barElement.attr("name");
-        unHighlight(songName);
-
-        // Only hide tooltip if this bar is not selected AND tooltip is not pinned
-        if (!barElement.classed('selected') && pinnedTooltip === null) {
-            TOOLTIP.transition().duration(TOOLTIP_FADE_DURATION).style('opacity',0);
-        }
-    });
-}
-
-chart.on('click', function(event) {
-    const target = event.target;
-    if (!target.classList.contains('bar')) return;
-
-    const barElement = d3.select(target);
-    const barData = barElement.datum();
-    const songName = barElement.attr("name");
-
-    // If clicking an already selected bar, deselect it and hide tooltip
-    if (barElement.classed('selected')) {
-        toggleSelect(songName);
-        TOOLTIP.transition().duration(TOOLTIP_FADE_DURATION).style('opacity',0);
-        TOOLTIP.classed('pinned', false);
-        pinnedTooltip = null;
-    } else {
-        // Otherwise select it and keep tooltip visible (pin it)
-        toggleSelect(songName);
-
-        // Show tooltip with content (important for mobile)
-        const tooltipHTML = generateTooltipHTML(barData);
-        TOOLTIP.html(tooltipHTML);
-        TOOLTIP.transition().duration(TOOLTIP_SHOW_DURATION).style('opacity','1');
-
-        // On desktop, position near cursor; on mobile, CSS handles bottom-fixed positioning
-        if (!isMobile) {
-            TOOLTIP.style("transform", `translate(${event.clientX + TOOLTIP_OFFSET_X}px, ${event.clientY + TOOLTIP_OFFSET_Y}px)`);
-        }
-
-        TOOLTIP.classed('pinned', true);
-        pinnedTooltip = barData.track_id;
-    }
-
-    // Stop event from bubbling to body
-    event.stopPropagation();
-});
-
-const showPromise = fetch(SHOWS_URL)
-  .then(
-    function(response) {
-      if (response.status !== 200) {
-        console.log('Http response not ok. Status Code: ' +
-          response.status);
-        return;
-      }
-
-      // Process the response
-      response.json().then(data => unpackShows(data));
-    }
-  )
-  .catch(function(err) {
-    console.log('Fetch Error :-S', err);
-  });
-
-/**
- * Get season information from a date string
- * @param {string} datestr - Date string in YYYY-MM-DD format
- * @returns {Object} Object with season name and index (0-4)
- */
-function getSeasonInfo(datestr) {
-    const date = new Date(datestr);
-    const month = date.getMonth(); // 0-11
-
-    // Winter1: Jan-Feb (months 0-1)
-    // Spring: Mar-May (months 2-4)
-    // Summer: Jun-Aug (months 5-7)
-    // Fall: Sep-Nov (months 8-10)
-    // Winter2: Dec (month 11)
-
-    if (month <= 1) return { season: 'winter1', season_index: 0 };
-    if (month <= 4) return { season: 'spring', season_index: 1 };
-    if (month <= 7) return { season: 'summer', season_index: 2 };
-    if (month <= 10) return { season: 'fall', season_index: 3 };
-    return { season: 'winter2', season_index: 4 };
-}
-
-/**
- * Flatten show data into tracks, build song index, and render chart
- * @param {Object} shows - Shows data object from API
- */
-function unpackShows(shows) {
-    let maxShows = 1;
-    allTracks = [];
-
-    // First pass: collect all tracks with basic info
-    const tracksWithDates = [];
-    for (i in shows) {
-        if(shows[i].tracks[0].show_position > maxShows){
-            maxShows=shows[i].tracks[0].show_position;
-        }
-        shows[i].tracks.forEach((track) => {
-            if(SHOW_SETS.includes(track.set)) {
-                const seasonInfo = getSeasonInfo(track.datestr);
-                tracksWithDates.push({
-                    track_id: track.track_id,
-                    song_name: track.song_name,
-                    song_ids: track.song_ids,
-                    show_id: track.show_id,
-                    duration: track.duration,
-                    datestr: track.datestr,
-                    venue: track.venue,
-                    show_position: track.show_position,
-                    shows_since_played: track.shows_since_played,
-                    first_date_played: track.first_date_played,
-                    likes_count: track.likes_count || 0,
-                    album_cover_url: track.album_cover_url,
-                    missing: track.missing,
-                    year: track.year,
-                    set: track.set,
-                    start_time: track.start_time,
-                    position: track.position,
-                    season: seasonInfo.season,
-                    season_index: seasonInfo.season_index
-                });
-            }
-            track.song_ids.forEach((song_id) => {
-                if(song_id in SONG_INDEX){
-                    SONG_INDEX[song_id].push(track.show_id);
-                } else {
-                    SONG_INDEX[song_id] = [track.show_id];
-                }
-            })
-            // Build search index: Map sanitized name -> display name
-            const sanitizedName = stripForHTML(track.song_name);
-            if (!songNameIndex.has(sanitizedName)) {
-                songNameIndex.set(sanitizedName, track.song_name);
+function unHighlight(className) {
+    const selectedColor = C.COLOR_MODE_STYLES[currentColorMode].selected;
+    d3.selectAll("." + className)
+        .transition()
+        .duration(C.HIGHLIGHT_DURATION)
+        .style('fill', function(data) {
+            const isSelected = d3.select(this).classed('selected');
+            if (isSelected) {
+                return selectedColor;
+            } else if (data.missing) {
+                return C.MISSING_COLOR;
+            } else {
+                return colorFunction(data);
             }
         });
-    }
-
-    // Second pass: calculate position within each season
-    // Group by year and season, then sort by date
-    const seasonPositions = {};
-
-    // Sort all tracks by date
-    tracksWithDates.sort((a, b) => new Date(a.datestr) - new Date(b.datestr));
-
-    // Assign positions within each year-season combination
-    tracksWithDates.forEach(track => {
-        const key = `${track.year}_${track.season}`;
-
-        if (!seasonPositions[key]) {
-            seasonPositions[key] = { position: 0, lastShowId: null };
-        }
-
-        // Only increment position when we encounter a new show
-        if (track.show_id !== seasonPositions[key].lastShowId) {
-            if (seasonPositions[key].lastShowId !== null) {
-                seasonPositions[key].position++;
-            }
-            seasonPositions[key].lastShowId = track.show_id;
-        }
-
-        track.season_position = seasonPositions[key].position;
-        allTracks.push(track);
-    });
-
-    selectedData = allTracks;
-
-    renderChart();
 }
 
 /**
- * Render the main chart with bars, labels, and dividers
+ * Toggle selection state for all bars with the same song name
+ * @param {string} className - Sanitized song name used as class
  */
-function renderChart() {
-
-    chart.selectAll('.bar')
-        .data(selectedData, data => data.track_id)
-        .enter()
-        .append('rect')
-        .attr('name', (data) => stripForHTML(data.song_name))
-        .attr('class', (data) => stripForHTML(data.song_name))
-        .classed('bar',true)
-        .attr('id', (data) => "s" + data.track_id)
-        .attr('width', BAR_WIDTH)
-        .attr('height', data => calculateBarHeight(data))
-        .attr('duration', data => data.duration)
-        .attr('x', data => x(data.show_position) + MARGINS.left)
-        .attr('y', data => calculateBarY(data))
-        .style("fill", data => {
+function toggleSelect(className) {
+    const selectedColor = C.COLOR_MODE_STYLES[currentColorMode].selected;
+    if (d3.selectAll("." + className).classed('selected')) {
+        d3.selectAll("." + className).classed('selected', false).style("fill", data => {
             if (data.missing) {
-                return MISSING_COLOR;
+                return C.MISSING_COLOR;
             }
             return colorFunction(data);
-        })
-        .style("stroke", BAR_STROKE_COLOR)
-        .style("stroke-width", BAR_STROKE_WIDTH)
-        .attr("rx", BAR_BORDER_RADIUS)
-        .attr("ry", BAR_BORDER_RADIUS);
-
-    chart.selectAll('.bar').data(selectedData, data => data.track_id).exit().remove();
-
-    // Click anywhere to hide tooltip and deselect all bars
-    d3.select('body').on('click', function() {
-        TOOLTIP.transition().duration(TOOLTIP_FADE_DURATION).style('opacity',0);
-        TOOLTIP.classed('pinned', false); // Remove pinned class
-        pinnedTooltip = null; // Unpin tooltip
-        // Deselect all selected bars
-        d3.selectAll('.bar.selected').each(function(data) {
-            d3.select(this).classed('selected', false).style("fill", () => {
-                if (data.missing) {
-                    return MISSING_COLOR;
-                }
-                return colorFunction(data);
-            });
         });
-    });
-
-    // Calculate season boundaries for dividers
-    const seasonBoundaries = [];
-
-    // Group tracks by year and find first show of each season
-    YEARS.forEach(year => {
-        const yearTracks = selectedData.filter(d => d.year === year);
-        if (yearTracks.length === 0) return;
-
-        // Sort by show_position to get chronological order
-        yearTracks.sort((a, b) => a.show_position - b.show_position);
-
-        let currentSeason = null;
-        let previousTrack = null;
-
-        yearTracks.forEach(track => {
-            // When season changes, mark a boundary between previous and current
-            if (currentSeason !== null && track.season_index !== currentSeason && previousTrack) {
-                // Position halfway between last show of previous season and first show of new season
-                // Use center of each bar (left edge + half width)
-                const prevX = x(previousTrack.show_position) + MARGINS.left + BAR_WIDTH / 2;
-                const currX = x(track.show_position) + MARGINS.left + BAR_WIDTH / 2;
-                const midX = (prevX + currX) / 2;
-
-                seasonBoundaries.push({
-                    year: year,
-                    x: midX,
-                    yearIndex: YEARS.indexOf(year)
-                });
-            }
-            currentSeason = track.season_index;
-            previousTrack = track;
-        });
-
-        // If first show is not winter1 (season_index 0), add divider before first bar
-        if (yearTracks.length > 0 && yearTracks[0].season_index > 0) {
-            const firstX = x(yearTracks[0].show_position) + MARGINS.left;
-            seasonBoundaries.push({
-                year: year,
-                x: firstX - BAR_WIDTH / 2 - 2,
-                yearIndex: YEARS.indexOf(year),
-                isStart: true
-            });
-        }
-    });
-
-    // Add season dividers
-    chart.selectAll('.season-divider')
-        .data(seasonBoundaries)
-        .enter()
-        .append('line')
-        .classed('season-divider', true)
-        .attr('x1', d => d.x)
-        .attr('x2', d => d.x)
-        .attr('y1', d => (d.yearIndex * YEAR_HEIGHT * PX_PER_MIN) + MARGINS.top + YEAR_DIVIDER_OFFSET_Y)
-        .attr('y2', d => ((d.yearIndex + 1) * YEAR_HEIGHT * PX_PER_MIN) + MARGINS.top + YEAR_DIVIDER_OFFSET_Y)
-        .style('stroke', SEASON_DIVIDER_COLOR)
-        .style('stroke-width', 1)
-        .style('opacity', SEASON_DIVIDER_OPACITY);
-
-    // Store season labels for all years
-    const seasonNames = {
-        0: 'WINTER',
-        1: 'SPRING',
-        2: 'SUMMER',
-        3: 'FALL',
-        4: 'WINTER'
-    };
-
-    YEARS.forEach(year => {
-        const yearTracks = selectedData.filter(d => d.year === year);
-        if (yearTracks.length === 0) return;
-
-        yearTracks.sort((a, b) => a.show_position - b.show_position);
-
-        const labels = [];
-        let seenSeasons = new Set();
-        yearTracks.forEach(track => {
-            if (!seenSeasons.has(track.season_index)) {
-                labels.push({
-                    season: seasonNames[track.season_index],
-                    x: x(track.show_position) + MARGINS.left - 80 // Account for negative margin
-                });
-                seenSeasons.add(track.season_index);
-            }
-        });
-        seasonLabelsByYear[year] = labels;
-    });
-
-    // Initialize sticky season labels with first year
-    updateStickySeasonLabels(YEARS[0]);
-
-    // Add year divider lines (horizontal)
-    chart.selectAll('.year-divider')
-        .data(YEARS)
-        .enter()
-        .append('line')
-        .classed('year-divider', true)
-        .attr('x1', MARGINS.left + YEAR_DIVIDER_OFFSET_X)
-        .attr('x2', CHART_WIDTH)
-        .attr('y1', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + MARGINS.top + YEAR_DIVIDER_OFFSET_Y)
-        .attr('y2', data => ((YEARS.indexOf(data))*YEAR_HEIGHT*PX_PER_MIN) + MARGINS.top + YEAR_DIVIDER_OFFSET_Y)
-        .style('stroke', YEAR_DIVIDER_COLOR)
-        .style('stroke-width', YEAR_DIVIDER_WIDTH)
-        .style('opacity', YEAR_DIVIDER_OPACITY);
-
-    // Create fixed HTML labels instead of SVG labels
-    const labelsContainer = d3.select('#labels-container');
-    labelsContainer.style('height', CHART_HEIGHT + 'px');
-
-    // Add year labels
-    labelsContainer.selectAll('.fixed-year-label')
-        .data(YEARS)
-        .enter()
-        .append('div')
-        .classed('fixed-year-label', true)
-        .text(year => year)
-        .style('top', year => ((YEARS.indexOf(year))*YEAR_HEIGHT*PX_PER_MIN + YEAR_LABEL_OFFSET_Y) + 'px');
-
-    // Add set labels for each year
-    labelsContainer.selectAll('.fixed-set-label')
-        .data(YEARS.flatMap(year =>
-            [{'year': year, 'num': 1, 'text': "SET 1"},
-             {'year': year, 'num': 2, 'text': "SET 2"},
-             {'year': year, 'num': 3, 'text': "E"}]))
-        .enter()
-        .append('div')
-        .classed('fixed-set-label', true)
-        .text(data => data.text)
-        .style('top', data => ((YEARS.indexOf(data.year))*YEAR_HEIGHT*PX_PER_MIN + (data.num-1)*SET_HEIGHT_MINUTES * PX_PER_MIN + MARGINS.top + SET_LABEL_OFFSET_Y) + 'px');
-}
-
-/**
- * Update sticky season labels for a specific year
- * @param {number} year - The year to display season labels for
- */
-function updateStickySeasonLabels(year) {
-    const labels = seasonLabelsByYear[year] || [];
-    const container = d3.select('#sticky-season-labels');
-
-    // Ensure we have a content wrapper with proper width
-    let wrapper = container.select('.sticky-labels-wrapper');
-    if (wrapper.empty()) {
-        wrapper = container.append('div')
-            .classed('sticky-labels-wrapper', true)
-            .style('position', 'relative')
-            .style('width', CHART_WIDTH + 'px')
-            .style('height', '100%');
+    } else {
+        d3.selectAll("." + className).classed('selected', true).style("fill", selectedColor);
     }
-
-    // Bind data and update labels
-    const seasonLabels = wrapper.selectAll('.sticky-season-label')
-        .data(labels, d => d.season);
-
-    // Remove old labels
-    seasonLabels.exit().remove();
-
-    // Add new labels
-    seasonLabels.enter()
-        .append('div')
-        .classed('sticky-season-label', true)
-        .merge(seasonLabels)
-        .text(d => d.season)
-        .style('left', d => d.x + 'px');
 }
 
 /**
- * Calculate which year is currently visible at the top of the viewport
- * @returns {number} The year currently at the top
+ * Strip special characters from string to make it HTML/CSS safe
+ * @param {string} string - The string to sanitize
+ * @returns {string} Sanitized string safe for use as HTML class/ID
  */
-function calculateVisibleYear() {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-
-    // Position just below the season labels divider in viewport coordinates
-    const checkPositionInViewport = STICKY_SEASON_LABELS_TOP + STICKY_SEASON_LABELS_HEIGHT;
-
-    // Convert to absolute position on the page
-    const absolutePosition = scrollTop + checkPositionInViewport;
-
-    // Account for chart wrapper negative margin and internal chart margins
-    const positionInChartData = absolutePosition + CHART_WRAPPER_MARGIN_TOP - MARGINS.top;
-
-    // Calculate which year this position corresponds to
-    const yearIndex = Math.floor(positionInChartData / (YEAR_HEIGHT * PX_PER_MIN));
-
-    // Clamp to valid range
-    const clampedIndex = Math.max(0, Math.min(yearIndex, YEARS.length - 1));
-
-    return YEARS[clampedIndex];
+function stripForHTML(string) {
+    return string.replace(/[.,?\/#!$%\^&\*;:{}=>_\'`~()]/g, "").replace(/ /g, "-").replace(/^\d/g, "z");
 }
 
 /**
@@ -720,7 +261,398 @@ function throttle(func, wait) {
     };
 }
 
-// Add scroll listener for updating sticky season labels
+// ============================================================================
+// DATA PROCESSING
+// ============================================================================
+
+/**
+ * Flatten show data into tracks, build song index, and render chart
+ * @param {Object} shows - Shows data object from API
+ */
+function unpackShows(shows) {
+    let maxShows = 1;
+    allTracks = [];
+
+    // First pass: collect all tracks with basic info
+    const tracksWithDates = [];
+    for (let i in shows) {
+        if (shows[i].tracks[0].show_position > maxShows) {
+            maxShows = shows[i].tracks[0].show_position;
+        }
+        shows[i].tracks.forEach((track) => {
+            if (C.SHOW_SETS.includes(track.set)) {
+                const seasonInfo = getSeasonInfo(track.datestr);
+                tracksWithDates.push({
+                    track_id: track.track_id,
+                    song_name: track.song_name,
+                    song_ids: track.song_ids,
+                    show_id: track.show_id,
+                    duration: track.duration,
+                    datestr: track.datestr,
+                    venue: track.venue,
+                    show_position: track.show_position,
+                    shows_since_played: track.shows_since_played,
+                    first_date_played: track.first_date_played,
+                    likes_count: track.likes_count || 0,
+                    album_cover_url: track.album_cover_url,
+                    missing: track.missing,
+                    year: track.year,
+                    set: track.set,
+                    start_time: track.start_time,
+                    position: track.position,
+                    season: seasonInfo.season,
+                    season_index: seasonInfo.season_index
+                });
+            }
+            track.song_ids.forEach((song_id) => {
+                if (song_id in songIndex) {
+                    songIndex[song_id].push(track.show_id);
+                } else {
+                    songIndex[song_id] = [track.show_id];
+                }
+            });
+            // Build search index
+            const sanitizedName = stripForHTML(track.song_name);
+            if (!songNameIndex.has(sanitizedName)) {
+                songNameIndex.set(sanitizedName, track.song_name);
+            }
+        });
+    }
+
+    // Second pass: calculate position within each season
+    const seasonPositions = {};
+    tracksWithDates.sort((a, b) => new Date(a.datestr) - new Date(b.datestr));
+
+    tracksWithDates.forEach(track => {
+        const key = `${track.year}_${track.season}`;
+
+        if (!seasonPositions[key]) {
+            seasonPositions[key] = { position: 0, lastShowId: null };
+        }
+
+        // Only increment position when we encounter a new show
+        if (track.show_id !== seasonPositions[key].lastShowId) {
+            if (seasonPositions[key].lastShowId !== null) {
+                seasonPositions[key].position++;
+            }
+            seasonPositions[key].lastShowId = track.show_id;
+        }
+
+        track.season_position = seasonPositions[key].position;
+        allTracks.push(track);
+    });
+
+    selectedData = allTracks;
+    renderChart();
+}
+
+/**
+ * Filter tracks to only shows containing specified songs
+ * @param {Array} songIDs - Array of song IDs to filter by
+ */
+function filterTo(songIDs) {
+    let selectedShows = [];
+    songIDs.forEach(s => selectedShows = selectedShows.concat(songIndex[s]));
+    selectedData = allTracks.filter((track) => selectedShows.includes(track.show_id));
+}
+
+/**
+ * Find a track by its ID
+ * @param {string} id - Track ID to find
+ * @returns {Object|undefined} The track object or undefined if not found
+ */
+function getTrackByID(id) {
+    for (let i = 0; i < selectedData.length; i++) {
+        if (selectedData[i].track_id === id) {
+            return selectedData[i];
+        }
+    }
+}
+
+// ============================================================================
+// RENDERING
+// ============================================================================
+
+/**
+ * Render the main chart with bars, labels, and dividers
+ */
+function renderChart() {
+    // Render bars
+    chart.selectAll('.bar')
+        .data(selectedData, data => data.track_id)
+        .enter()
+        .append('rect')
+        .attr('name', (data) => stripForHTML(data.song_name))
+        .attr('class', (data) => stripForHTML(data.song_name))
+        .classed('bar', true)
+        .attr('id', (data) => "s" + data.track_id)
+        .attr('width', C.BAR_WIDTH)
+        .attr('height', data => calculateBarHeight(data))
+        .attr('duration', data => data.duration)
+        .attr('x', data => xScale(data.show_position) + C.MARGINS.left)
+        .attr('y', data => calculateBarY(data))
+        .style("fill", data => {
+            if (data.missing) {
+                return C.MISSING_COLOR;
+            }
+            return colorFunction(data);
+        })
+        .style("stroke", C.BAR_STROKE_COLOR)
+        .style("stroke-width", C.BAR_STROKE_WIDTH)
+        .attr("rx", C.BAR_BORDER_RADIUS)
+        .attr("ry", C.BAR_BORDER_RADIUS);
+
+    chart.selectAll('.bar').data(selectedData, data => data.track_id).exit().remove();
+
+    // Click anywhere to deselect all bars and hide tooltip
+    d3.select('body').on('click', function() {
+        tooltip.transition().duration(C.TOOLTIP_FADE_DURATION).style('opacity', 0);
+        tooltip.classed('pinned', false);
+        pinnedTooltip = null;
+        d3.selectAll('.bar.selected').each(function(data) {
+            d3.select(this).classed('selected', false).style("fill", () => {
+                if (data.missing) {
+                    return C.MISSING_COLOR;
+                }
+                return colorFunction(data);
+            });
+        });
+    });
+
+    // Calculate season boundaries for dividers
+    const seasonBoundaries = [];
+
+    C.YEARS.forEach(year => {
+        const yearTracks = selectedData.filter(d => d.year === year);
+        if (yearTracks.length === 0) return;
+
+        yearTracks.sort((a, b) => a.show_position - b.show_position);
+
+        let currentSeason = null;
+        let previousTrack = null;
+
+        yearTracks.forEach(track => {
+            if (currentSeason !== null && track.season_index !== currentSeason && previousTrack) {
+                const prevX = xScale(previousTrack.show_position) + C.MARGINS.left + C.BAR_WIDTH / 2;
+                const currX = xScale(track.show_position) + C.MARGINS.left + C.BAR_WIDTH / 2;
+                const midX = (prevX + currX) / 2;
+
+                seasonBoundaries.push({
+                    year: year,
+                    x: midX,
+                    yearIndex: C.YEARS.indexOf(year)
+                });
+            }
+            currentSeason = track.season_index;
+            previousTrack = track;
+        });
+
+        // If first show is not winter1, add divider before first bar
+        if (yearTracks.length > 0 && yearTracks[0].season_index > 0) {
+            const firstX = xScale(yearTracks[0].show_position) + C.MARGINS.left;
+            seasonBoundaries.push({
+                year: year,
+                x: firstX - C.BAR_WIDTH / 2 - 2,
+                yearIndex: C.YEARS.indexOf(year),
+                isStart: true
+            });
+        }
+    });
+
+    // Render season dividers
+    chart.selectAll('.season-divider')
+        .data(seasonBoundaries)
+        .enter()
+        .append('line')
+        .classed('season-divider', true)
+        .attr('x1', d => d.x)
+        .attr('x2', d => d.x)
+        .attr('y1', d => (d.yearIndex * C.YEAR_HEIGHT * C.PX_PER_MIN) + C.MARGINS.top + C.YEAR_DIVIDER_OFFSET_Y)
+        .attr('y2', d => ((d.yearIndex + 1) * C.YEAR_HEIGHT * C.PX_PER_MIN) + C.MARGINS.top + C.YEAR_DIVIDER_OFFSET_Y)
+        .style('stroke', C.SEASON_DIVIDER_COLOR)
+        .style('stroke-width', 1)
+        .style('opacity', C.SEASON_DIVIDER_OPACITY);
+
+    // Build season labels for all years
+    const seasonNames = {
+        0: 'WINTER',
+        1: 'SPRING',
+        2: 'SUMMER',
+        3: 'FALL',
+        4: 'WINTER'
+    };
+
+    C.YEARS.forEach(year => {
+        const yearTracks = selectedData.filter(d => d.year === year);
+        if (yearTracks.length === 0) return;
+
+        yearTracks.sort((a, b) => a.show_position - b.show_position);
+
+        const labels = [];
+        let seenSeasons = new Set();
+        yearTracks.forEach(track => {
+            if (!seenSeasons.has(track.season_index)) {
+                labels.push({
+                    season: seasonNames[track.season_index],
+                    x: xScale(track.show_position) + C.MARGINS.left - 80
+                });
+                seenSeasons.add(track.season_index);
+            }
+        });
+        seasonLabelsByYear[year] = labels;
+    });
+
+    updateStickySeasonLabels(C.YEARS[0]);
+
+    // Render year dividers
+    chart.selectAll('.year-divider')
+        .data(C.YEARS)
+        .enter()
+        .append('line')
+        .classed('year-divider', true)
+        .attr('x1', C.MARGINS.left + C.YEAR_DIVIDER_OFFSET_X)
+        .attr('x2', C.CHART_WIDTH)
+        .attr('y1', data => ((C.YEARS.indexOf(data)) * C.YEAR_HEIGHT * C.PX_PER_MIN) + C.MARGINS.top + C.YEAR_DIVIDER_OFFSET_Y)
+        .attr('y2', data => ((C.YEARS.indexOf(data)) * C.YEAR_HEIGHT * C.PX_PER_MIN) + C.MARGINS.top + C.YEAR_DIVIDER_OFFSET_Y)
+        .style('stroke', C.YEAR_DIVIDER_COLOR)
+        .style('stroke-width', C.YEAR_DIVIDER_WIDTH)
+        .style('opacity', C.YEAR_DIVIDER_OPACITY);
+
+    // Render fixed labels (year and set labels)
+    const labelsContainer = d3.select('#labels-container');
+    labelsContainer.style('height', C.CHART_HEIGHT + 'px');
+
+    labelsContainer.selectAll('.fixed-year-label')
+        .data(C.YEARS)
+        .enter()
+        .append('div')
+        .classed('fixed-year-label', true)
+        .text(year => year)
+        .style('top', year => ((C.YEARS.indexOf(year)) * C.YEAR_HEIGHT * C.PX_PER_MIN + C.YEAR_LABEL_OFFSET_Y) + 'px');
+
+    labelsContainer.selectAll('.fixed-set-label')
+        .data(C.YEARS.flatMap(year =>
+            [{ 'year': year, 'num': 1, 'text': "SET 1" },
+            { 'year': year, 'num': 2, 'text': "SET 2" },
+            { 'year': year, 'num': 3, 'text': "E" }]))
+        .enter()
+        .append('div')
+        .classed('fixed-set-label', true)
+        .text(data => data.text)
+        .style('top', data => ((C.YEARS.indexOf(data.year)) * C.YEAR_HEIGHT * C.PX_PER_MIN + (data.num - 1) * C.SET_HEIGHT_MINUTES * C.PX_PER_MIN + C.MARGINS.top + C.SET_LABEL_OFFSET_Y) + 'px');
+}
+
+/**
+ * Update sticky season labels for a specific year
+ * @param {number} year - The year to display season labels for
+ */
+function updateStickySeasonLabels(year) {
+    const labels = seasonLabelsByYear[year] || [];
+    const container = d3.select('#sticky-season-labels');
+
+    let wrapper = container.select('.sticky-labels-wrapper');
+    if (wrapper.empty()) {
+        wrapper = container.append('div')
+            .classed('sticky-labels-wrapper', true)
+            .style('position', 'relative')
+            .style('width', C.CHART_WIDTH + 'px')
+            .style('height', '100%');
+    }
+
+    const seasonLabels = wrapper.selectAll('.sticky-season-label')
+        .data(labels, d => d.season);
+
+    seasonLabels.exit().remove();
+
+    seasonLabels.enter()
+        .append('div')
+        .classed('sticky-season-label', true)
+        .merge(seasonLabels)
+        .text(d => d.season)
+        .style('left', d => d.x + 'px');
+}
+
+// ============================================================================
+// EVENT HANDLERS - Bar Interactions
+// ============================================================================
+
+// Desktop: hover shows tooltip and highlights
+if (!C.isMobile) {
+    chart.on('mouseover', function(event) {
+        const target = event.target;
+        if (!target.classList.contains('bar')) return;
+        if (pinnedTooltip !== null) return;
+
+        const barElement = d3.select(target);
+        const barData = barElement.datum();
+        const songName = barElement.attr("name");
+
+        highlight(songName);
+        tooltip.transition().duration(C.TOOLTIP_SHOW_DURATION).style('opacity', '1');
+        tooltip.style("transform", `translate(${event.clientX + C.TOOLTIP_OFFSET_X}px, ${event.clientY + C.TOOLTIP_OFFSET_Y}px)`);
+        tooltip.html(generateTooltipHTML(barData));
+    });
+
+    chart.on('mouseout', function(event) {
+        const target = event.target;
+        if (!target.classList.contains('bar')) return;
+
+        const barElement = d3.select(target);
+        const songName = barElement.attr("name");
+        unHighlight(songName);
+
+        if (!barElement.classed('selected') && pinnedTooltip === null) {
+            tooltip.transition().duration(C.TOOLTIP_FADE_DURATION).style('opacity', 0);
+        }
+    });
+}
+
+// Click to select/deselect and pin/unpin tooltip
+chart.on('click', function(event) {
+    const target = event.target;
+    if (!target.classList.contains('bar')) return;
+
+    const barElement = d3.select(target);
+    const barData = barElement.datum();
+    const songName = barElement.attr("name");
+
+    if (barElement.classed('selected')) {
+        // Deselect
+        toggleSelect(songName);
+        tooltip.transition().duration(C.TOOLTIP_FADE_DURATION).style('opacity', 0);
+        tooltip.classed('pinned', false);
+        pinnedTooltip = null;
+    } else {
+        // Select and pin tooltip
+        toggleSelect(songName);
+        tooltip.html(generateTooltipHTML(barData));
+        tooltip.transition().duration(C.TOOLTIP_SHOW_DURATION).style('opacity', '1');
+
+        if (!C.isMobile) {
+            tooltip.style("transform", `translate(${event.clientX + C.TOOLTIP_OFFSET_X}px, ${event.clientY + C.TOOLTIP_OFFSET_Y}px)`);
+        }
+
+        tooltip.classed('pinned', true);
+        pinnedTooltip = barData.track_id;
+    }
+
+    event.stopPropagation();
+});
+
+// ============================================================================
+// EVENT HANDLERS - Scrolling
+// ============================================================================
+
+// Sync scrolling between fixed scrollbar and chart
+svgContainer.addEventListener('scroll', () => {
+    fixedScrollbar.scrollLeft = svgContainer.scrollLeft;
+});
+
+fixedScrollbar.addEventListener('scroll', () => {
+    svgContainer.scrollLeft = fixedScrollbar.scrollLeft;
+});
+
+// Update sticky season labels on scroll
 window.addEventListener('scroll', throttle(() => {
     const currentYear = calculateVisibleYear();
     if (currentYear !== lastVisibleYear) {
@@ -735,42 +667,25 @@ svgContainer.addEventListener('scroll', () => {
     stickyLabels.scrollLeft = svgContainer.scrollLeft;
 });
 
-/**
- * Filter tracks to only shows containing specified songs
- * @param {Array} songIDs - Array of song IDs to filter by
- */
-function filterTo(songIDs) {
-    selectedShows = [];
-    songIDs.forEach(s => selectedShows = selectedShows.concat(SONG_INDEX[s]));
-    selectedData = allTracks.filter((track) => selectedShows.includes(track.show_id));
-}
+// ============================================================================
+// EVENT HANDLERS - Color Mode Selection
+// ============================================================================
 
-/**
- * Find a track by its ID
- * @param {string} id - Track ID to find
- * @returns {Object|undefined} The track object or undefined if not found
- */
-function getTrackByID(id){
-    for (let i = 0; i < selectedData.length; i++){
-        if (selectedData[i].track_id === id){
-            return selectedData[i];
-        }
-    }
-}
-
+// Populate color mode dropdown
 d3.select("#selectButton")
     .selectAll('showOptions')
-    .data(colorOptions)
+    .data(C.colorOptions)
     .enter()
     .append('option')
     .text((data) => data)
-    .attr('value',(data) => data);
+    .attr('value', (data) => data);
 
-d3.select("#selectButton").on("change",function(d) {
+// Handle color mode changes
+d3.select("#selectButton").on("change", function(d) {
     let selectedFunction = d3.select(this).property("value");
-    currentColorMode = selectedFunction; // Track current mode
-    //selectedData = DUMMY_TRACKS.filter(d => d.name != selectedSong);
-    switch(selectedFunction) {
+    currentColorMode = selectedFunction;
+
+    switch (selectedFunction) {
         case "Days Since Played":
             colorFunction = function(track) {
                 return colorDaysSincePlayed(track.days_since_played);
@@ -783,7 +698,7 @@ d3.select("#selectButton").on("change",function(d) {
             break;
         case "Song Age":
             colorFunction = function(track) {
-                return colorAge(Age(track));
+                return colorAge(calculateSongAge(track));
             };
             break;
         case "Likes":
@@ -792,10 +707,10 @@ d3.select("#selectButton").on("change",function(d) {
             };
             break;
         case "None":
-            colorFunction = function() { return DEFAULT_COLOR };
+            colorFunction = function() { return C.DEFAULT_COLOR };
     }
 
-    const selectedColor = COLOR_MODE_STYLES[currentColorMode].selected;
+    const selectedColor = C.COLOR_MODE_STYLES[currentColorMode].selected;
     chart.selectAll('.bar')
         .data(selectedData, data => data.track_id)
         .style("fill", function(data) {
@@ -803,84 +718,95 @@ d3.select("#selectButton").on("change",function(d) {
             if (isSelected) {
                 return selectedColor;
             } else if (data.missing) {
-                return MISSING_COLOR;
+                return C.MISSING_COLOR;
             }
             return colorFunction(data);
         });
-    });
+});
 
-/**
- * Highlight all bars with the same song name
- * @param {string} className - Sanitized song name used as class
- */
-function highlight(className) {
-    const highlightColor = COLOR_MODE_STYLES[currentColorMode].highlight;
-    d3.selectAll("." + className)
-        .transition()
-        .duration(HIGHLIGHT_DURATION)
-        .style('fill', highlightColor);
-}
+// ============================================================================
+// EVENT HANDLERS - Search Functionality
+// ============================================================================
 
-/**
- * Toggle selection state for all bars with the same song name
- * @param {string} className - Sanitized song name used as class
- */
-function toggleSelect(className) {
-    const selectedColor = COLOR_MODE_STYLES[currentColorMode].selected;
-    if (d3.selectAll("." + className).classed('selected')) {
-        d3.selectAll("." + className).classed('selected', false).style("fill", data => {
-            if (data.missing) {
-                return MISSING_COLOR;
-            }
-            return colorFunction(data);
-        });
+const searchInput = document.getElementById('song-search');
+const searchResults = document.getElementById('search-results');
+
+function handleSearchInput(event) {
+    const query = event.target.value.trim().toLowerCase();
+
+    if (query === '') {
+        searchResults.innerHTML = '';
+        searchResults.classList.remove('active');
+        return;
+    }
+
+    const matches = Array.from(songNameIndex.values())
+        .filter(songName => songName.toLowerCase().includes(query))
+        .sort()
+        .slice(0, 10);
+
+    if (matches.length > 0) {
+        searchResults.innerHTML = matches
+            .map(songName => `<div class="search-result-item" data-song="${stripForHTML(songName)}">${songName}</div>`)
+            .join('');
+        searchResults.classList.add('active');
     } else {
-        d3.selectAll("." + className).classed('selected', true).style("fill", selectedColor);
+        searchResults.innerHTML = '<div class="search-result-item" style="color: #999; cursor: default;">No matches found</div>';
+        searchResults.classList.add('active');
     }
 }
 
-/**
- * Remove highlight from all bars with the same song name
- * @param {string} className - Sanitized song name used as class
- */
-function unHighlight(className) {
-    const selectedColor = COLOR_MODE_STYLES[currentColorMode].selected;
-    d3.selectAll("." + className)
-        .transition()
-        .duration(HIGHLIGHT_DURATION)
-        .style('fill', function(data) {
-            // Check if this element is selected
-            const isSelected = d3.select(this).classed('selected');
-            if (isSelected) {
-                return selectedColor;
-            } else if (data.missing) {
-                return MISSING_COLOR;
-            } else {
-                return colorFunction(data);
-            }
-        });
+searchInput.addEventListener('input', handleSearchInput);
+
+// Hide search results when clicking outside
+document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+        searchResults.classList.remove('active');
+    }
+});
+
+// Show results when clicking back into search input
+searchInput.addEventListener('focus', () => {
+    if (searchInput.value.trim() !== '') {
+        handleSearchInput({ target: searchInput });
+    }
+});
+
+// Search results hover (desktop only)
+if (!C.isMobile) {
+    searchResults.addEventListener('mouseover', (e) => {
+        if (e.target.classList.contains('search-result-item')) {
+            const songSlug = e.target.getAttribute('data-song');
+            if (songSlug) highlight(songSlug);
+        }
+    });
+
+    searchResults.addEventListener('mouseout', (e) => {
+        if (e.target.classList.contains('search-result-item')) {
+            const songSlug = e.target.getAttribute('data-song');
+            if (songSlug) unHighlight(songSlug);
+        }
+    });
 }
 
-/**
- * Strip special characters from string to make it HTML/CSS safe
- * @param {string} string - The string to sanitize
- * @returns {string} Sanitized string safe for use as HTML class/ID
- */
-function stripForHTML(string) {
-    return string.replace(/[.,?\/#!$%\^&\*;:{}=>_\'`~()]/g, "").replace(/ /g, "-").replace(/^\d/g, "z");
-}
+// Search results click
+searchResults.addEventListener('click', (e) => {
+    if (e.target.classList.contains('search-result-item')) {
+        const songSlug = e.target.getAttribute('data-song');
+        if (songSlug) {
+            toggleSelect(songSlug);
+            searchInput.value = '';
+            searchResults.innerHTML = '';
+            searchResults.classList.remove('active');
+            e.stopPropagation();
+        }
+    }
+});
 
-/**
- * Calculate the age of a song in years
- * @param {Object} track - Track object with first_date_played property
- * @returns {number} Age in years
- */
-function Age(track){
-    const age_ms = Date.now() - new Date(track.first_date_played);
-    return age_ms / MS_PER_YEAR;
-}
+// ============================================================================
+// EVENT HANDLERS - Help Modal
+// ============================================================================
 
-// Help Modal
 const helpSlides = [
     'images/Phish How To (1).jpg',
     'images/Phish How To (2).jpg',
@@ -932,93 +858,12 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
 });
 
-// Song Search
-const searchInput = document.getElementById('song-search');
-const searchResults = document.getElementById('search-results');
+// ============================================================================
+// EVENT HANDLERS - Mobile-Specific
+// ============================================================================
 
-function handleSearchInput(event) {
-    const query = event.target.value.trim().toLowerCase();
-
-    // Clear and hide results if query is empty
-    if (query === '') {
-        searchResults.innerHTML = '';
-        searchResults.classList.remove('active');
-        return;
-    }
-
-    // Filter song names by substring match (case-insensitive)
-    const matches = Array.from(songNameIndex.values())
-        .filter(songName => songName.toLowerCase().includes(query))
-        .sort()
-        .slice(0, 10);
-
-    // Display results
-    if (matches.length > 0) {
-        searchResults.innerHTML = matches
-            .map(songName => `<div class="search-result-item" data-song="${stripForHTML(songName)}">${songName}</div>`)
-            .join('');
-        searchResults.classList.add('active');
-    } else {
-        searchResults.innerHTML = '<div class="search-result-item" style="color: #999; cursor: default;">No matches found</div>';
-        searchResults.classList.add('active');
-    }
-}
-
-searchInput.addEventListener('input', handleSearchInput);
-
-// Hide search results when clicking outside
-document.addEventListener('click', (e) => {
-    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-        searchResults.classList.remove('active');
-    }
-});
-
-// Show results when clicking back into search input if there's a query
-searchInput.addEventListener('focus', () => {
-    if (searchInput.value.trim() !== '') {
-        handleSearchInput({ target: searchInput });
-    }
-});
-
-// Event delegation for search results hover - reuse highlight() function (desktop only)
-if (!isMobile) {
-    searchResults.addEventListener('mouseover', (e) => {
-        if (e.target.classList.contains('search-result-item')) {
-            const songSlug = e.target.getAttribute('data-song');
-            if (songSlug) {
-                highlight(songSlug);
-            }
-        }
-    });
-
-    searchResults.addEventListener('mouseout', (e) => {
-        if (e.target.classList.contains('search-result-item')) {
-            const songSlug = e.target.getAttribute('data-song');
-            if (songSlug) {
-                unHighlight(songSlug);
-            }
-        }
-    });
-}
-
-// Event delegation for search results click - reuse toggleSelect() function
-searchResults.addEventListener('click', (e) => {
-    if (e.target.classList.contains('search-result-item')) {
-        const songSlug = e.target.getAttribute('data-song');
-        if (songSlug) {
-            toggleSelect(songSlug);
-            // Clear search and hide results after selection
-            searchInput.value = '';
-            searchResults.innerHTML = '';
-            searchResults.classList.remove('active');
-            // Stop propagation to prevent body click handler from deselecting
-            e.stopPropagation();
-        }
-    }
-});
-
-// Mobile footer toggle (info icon)
-if (isMobile) {
+if (C.isMobile) {
+    // Info icon: toggle footer visibility
     const infoIcon = document.getElementById('info-icon');
     const footer = document.getElementById('footer');
     const scrollbar = document.getElementById('fixed-scrollbar');
@@ -1029,7 +874,6 @@ if (isMobile) {
         e.stopPropagation();
     });
 
-    // Hide footer when clicking anywhere else
     document.addEventListener('click', (e) => {
         if (!footer.contains(e.target) && !infoIcon.contains(e.target)) {
             footer.classList.remove('active');
@@ -1037,7 +881,7 @@ if (isMobile) {
         }
     });
 
-    // Mobile controls panel toggle
+    // Controls FAB: open mobile control panel
     const controlsFab = document.getElementById('controls-fab');
     const controlsPanel = document.getElementById('controls-panel');
     const controlsPanelClose = document.getElementById('controls-panel-close');
@@ -1060,7 +904,7 @@ if (isMobile) {
         }
     });
 
-    // Sync mobile color select with desktop - trigger same change event
+    // Sync mobile color select with desktop
     mobileColorSelect.value = currentColorMode;
     mobileColorSelect.addEventListener('change', function() {
         const value = this.value;
@@ -1097,7 +941,6 @@ if (isMobile) {
 
     mobileSearchInput.addEventListener('input', handleMobileSearchInput);
 
-    // Mobile search results click
     mobileSearchResults.addEventListener('click', (e) => {
         if (e.target.classList.contains('search-result-item')) {
             const songSlug = e.target.getAttribute('data-song');
@@ -1107,9 +950,24 @@ if (isMobile) {
                 mobileSearchResults.innerHTML = '';
                 mobileSearchResults.classList.remove('active');
                 controlsPanel.classList.remove('active');
-                // Stop propagation to prevent body click handler from deselecting
                 e.stopPropagation();
             }
         }
     });
 }
+
+// ============================================================================
+// INITIALIZATION - Data Loading
+// ============================================================================
+
+fetch(SHOWS_URL)
+    .then(function(response) {
+        if (response.status !== 200) {
+            console.log('Http response not ok. Status Code: ' + response.status);
+            return;
+        }
+        response.json().then(data => unpackShows(data));
+    })
+    .catch(function(err) {
+        console.log('Fetch Error :-S', err);
+    });
