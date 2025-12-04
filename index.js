@@ -9,7 +9,7 @@ const USE_LOCAL_DATA_FOR_DEV = true;
 const SHOWS_FILENAME = C.CHUNK_VERSION === 'all' ? 'shows.json' : `chunks/shows_${C.CHUNK_VERSION}.json`;
 const SHOWS_URL = (isLocal && USE_LOCAL_DATA_FOR_DEV)
     ? `/data/${SHOWS_FILENAME}`
-    : `https://jzemel.github.io/song_signature/data/${SHOWS_FILENAME}`;
+    : `${window.location.hostname}/data/${SHOWS_FILENAME}`;
 
 // ============================================================================
 // STATE MANAGEMENT
