@@ -102,49 +102,60 @@ def load_raw_tracks(filename):
 def calculate_show_positions(tracks):
     """
     Calculate show_position for each show within its year.
+    Excludes shows that only have soundcheck tracks.
     Returns dict mapping show_date to position within that year.
     """
     print("Calculating show positions within each year...")
-    
-    # Group show dates by year
+
+    # Group show dates by year, excluding soundcheck-only shows
     shows_by_year = defaultdict(list)
     for track in tracks:
+        # Skip soundcheck tracks when counting shows
+        if str(track["set_name"]).lower() == "soundcheck":
+            continue
+
         show_date = track["show_date"]
         year = datetime.strptime(show_date, "%Y-%m-%d").year
         if show_date not in [d for d in shows_by_year[year]]:
             shows_by_year[year].append(show_date)
-    
+
     # Sort shows within each year and assign positions
     show_positions = {}
     for year, dates in shows_by_year.items():
         sorted_dates = sorted(dates)
         for idx, date in enumerate(sorted_dates, start=1):
             show_positions[date] = idx
-    
+
     return show_positions
 
 def calculate_song_gaps(tracks):
     """
     Calculate shows_since_played, days_since_played, and first_date_played.
+    Excludes soundcheck tracks from gap calculations.
     Returns:
         - gaps: dict mapping (song_slug, show_date) to gap values
         - first_performances: dict mapping song_slug to first performance date
     """
     print("Calculating song performance gaps...")
-    
-    # Group tracks by song
+
+    # Group tracks by song, excluding soundcheck tracks
     tracks_by_song = defaultdict(list)
-    
+
     for track in tracks:
+        # Skip soundcheck tracks
+        if str(track.get("set_name", "")).lower() == "soundcheck":
+            continue
+
         if track.get("songs"):
             for song in track["songs"]:
                 tracks_by_song[song["slug"]].append({
                     "show_date": track["show_date"],
                     "track_id": track["id"]
                 })
-    
-    # Get all unique show dates for counting shows between performances
-    all_show_dates = sorted(set(track["show_date"] for track in tracks))
+
+    # Get all unique show dates for counting shows between performances (excluding soundcheck-only shows)
+    all_show_dates = sorted(set(track["show_date"] for track in tracks
+                                if str(track.get("set_name", "")).lower() != "soundcheck"))
     
     # Calculate gaps for each song
     gaps = {}
@@ -257,32 +268,36 @@ def transform_tracks(tracks, manual_updates=None):
         set_cumulative_time = defaultdict(float)
         
         for track in show_tracks:
+            # Skip soundcheck tracks
+            if str(track["set_name"]).lower() == "soundcheck":
+                continue
+
             # Parse date
             date_obj = datetime.strptime(show_date, "%Y-%m-%d")
-            
+
             # Get song information
             song_ids = []
             song_names = []
             first_date_played = ""
             shows_since = 0
             days_since = 0
-            
+
             if track.get("songs"):
                 for song in track["songs"]:
                     song_slug = song["slug"]
                     song_ids.append(song_slug)  # Use slug as the unique identifier
                     song_names.append(song["title"])
-                    
+
                     # Get first performance date
                     if song_slug in first_performances:
                         first_date_played = first_performances[song_slug]
-                    
+
                     # Get gaps for this song
                     gap_key = (song_slug, show_date)
                     if gap_key in song_gaps:
                         shows_since = song_gaps[gap_key]["shows_since_played"]
                         days_since = song_gaps[gap_key]["days_since_played"]
-            
+
             song_name = " > ".join(song_names) if song_names else track["title"]
 
             # Get start time for this track (cumulative time in the set)
@@ -299,8 +314,6 @@ def transform_tracks(tracks, manual_updates=None):
                 set_number = "3"
             elif set_name_lower == "encore":
                 set_number = "E"
-            elif set_name_lower == "soundcheck":
-                set_number = "1"
             else:
                 # Fallback: try to extract number, or use as-is
                 set_number = str(track["set_name"])
@@ -356,7 +369,10 @@ def transform_tracks(tracks, manual_updates=None):
 
             # Update cumulative time for this set
             set_cumulative_time[set_key] += transformed_track["duration"]
-    
+
+    # Remove shows with no tracks (soundcheck-only shows)
+    shows_data = {show_id: show for show_id, show in shows_data.items() if show["tracks"]}
+
     total_tracks = sum(len(show["tracks"]) for show in shows_data.values())
     print(f"Transformed {total_tracks} tracks into {len(shows_data)} shows")
 

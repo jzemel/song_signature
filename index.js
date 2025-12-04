@@ -279,6 +279,11 @@ function unpackShows(shows) {
     // First pass: collect all tracks with basic info
     const tracksWithDates = [];
     for (let i in shows) {
+        // Skip shows with no tracks (e.g., soundcheck-only shows)
+        if (!shows[i].tracks || shows[i].tracks.length === 0) {
+            continue;
+        }
+
         if (shows[i].tracks[0].show_position > maxShows) {
             maxShows = shows[i].tracks[0].show_position;
         }
