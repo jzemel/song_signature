@@ -1,11 +1,11 @@
 # Phish graphs
-Data visualization: 40+ years of Phish setlists, song lengths, visualized in a client side web app. 
+Data visualization: 40+ years of Phish setlists, song lengths, visualized in a client side web app (better on desktop). 
 
 Inspired by [Phish.in](http://Phish.in), [phishjustjams.com](http://phishjustjams.com), [@you_enjoy_my_data](https://www.instagram.com/you_enjoy_my_data/), and others. I wanted to see how song performances vary by show, stack up against each other visually - mainly by how long they get **jammed** out. Made this for fun. (Claude assist on the css and style.)
 
 All credit to Phish.in API.
 
-Served from github pages, accessible at https://jzemel.github.io/song_signature/
+Served from github pages, accessible at https://phishgraphs.com OR https://jzemel.github.io/song_signature/
 
 # To use
 * open up [the sites page](https://jzemel.github.io/song_signature/)
