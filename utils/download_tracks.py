@@ -5,7 +5,7 @@ import time
 
 # Configuration
 API_BASE_URL = "https://phish.in/api/v2"
-OUTPUT_FILE = "tracks_raw.json"
+OUTPUT_FILE = "/data/tracks_raw.json"
 
 def fetch_tracks(start_date=None, test_mode=False):
     """
