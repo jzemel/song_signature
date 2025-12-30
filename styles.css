@@ -6,6 +6,11 @@ body {
     background: var(--background-color);
 }
 
+span.update_tag {
+    font-size: 0.7em;
+    color: #E70A2C;
+}
+
 #controls {
     position: sticky;
     top: 0;
