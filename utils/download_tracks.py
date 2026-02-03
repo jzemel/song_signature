@@ -31,7 +31,7 @@ def fetch_tracks(start_date=None, test_mode=False):
     
     while True:
         # Build URL with params
-        url = f"{API_BASE_URL}/tracks?page={page}&per_page=100&sort=date:asc"
+        url = f"{API_BASE_URL}/tracks?page={page}&per_page=20000&sort=date:asc"
         if start_date:
             url += f"&start_date={start_date}"
         
@@ -73,7 +73,7 @@ def fetch_tracks(start_date=None, test_mode=False):
                 if page >= total_pages:
                     print(f"Reached last page ({total_pages})")
                     break
-            elif len(tracks) < 100:
+            elif len(tracks) < 20000:
                 # If we got less than a full page, probably the last page
                 print("Last page (partial results)")
                 break
