@@ -45,6 +45,13 @@ const colorLikesCount = d3.scaleSequential()
     .interpolator(d3.interpolatePurples)
     .unknown(C.COLOR_SCALE_UNKNOWN);
 
+const colorLengthVsTypical = d3.scaleDiverging()
+    .domain([C.LENGTH_VS_TYPICAL_DOMAIN_MIN, 0, C.LENGTH_VS_TYPICAL_DOMAIN_MAX])
+    .interpolator(t => d3.piecewise(d3.interpolateRgb, [
+        "#2167AC", "#7BABB0", "#D5EEB3", "#CF7F71", "#C80F2E"
+    ])(t))
+    .clamp(false);
+
 const xScale = d3.scaleLinear()
     .range([0, C.CHART_WIDTH])
     .domain([C.X_SCALE_MIN, C.X_SCALE_MAX]);
@@ -348,6 +355,27 @@ function unpackShows(shows) {
 
         track.season_position = seasonPositions[key].position;
         allTracks.push(track);
+    });
+
+    // Compute std deviations from mean duration per song for "Length vs Typical"
+    const songStats = {};
+    allTracks.forEach(t => {
+        if (t.missing || t.duration <= 0) return;
+        const key = t.song_ids.join(',');
+        if (!songStats[key]) songStats[key] = { values: [] };
+        songStats[key].values.push(t.duration);
+    });
+    for (const key in songStats) {
+        const vals = songStats[key].values;
+        const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const variance = vals.reduce((sum, v) => sum + (v - mean) ** 2, 0) / vals.length;
+        songStats[key].mean = mean;
+        songStats[key].std = Math.sqrt(variance);
+    }
+    allTracks.forEach(t => {
+        const key = t.song_ids.join(',');
+        const s = songStats[key];
+        t.length_vs_typical = s && s.std > 0 ? (t.duration - s.mean) / s.std : null;
     });
 
     selectedData = allTracks;
@@ -712,6 +740,11 @@ d3.select("#selectButton").on("change", function(d) {
         case "Likes":
             colorFunction = function(track) {
                 return colorLikesCount(track.likes_count);
+            };
+            break;
+        case "Length vs Typical":
+            colorFunction = function(track) {
+                return track.length_vs_typical !== null ? colorLengthVsTypical(track.length_vs_typical) : C.COLOR_SCALE_UNKNOWN;
             };
             break;
         case "None":
