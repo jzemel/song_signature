@@ -118,7 +118,7 @@ export const X_SCALE_MIN = 0;
 export const X_SCALE_MAX = 140;
 export const MS_PER_YEAR = 1000 * 60 * 60 * 24 * 365;
 
-export const LENGTH_VS_TYPICAL_DOMAIN_MIN = -3;
-export const LENGTH_VS_TYPICAL_DOMAIN_MAX = 4;
+export const LENGTH_VS_TYPICAL_DOMAIN_MIN = -2;
+export const LENGTH_VS_TYPICAL_DOMAIN_MAX = 6;
 
 export const colorOptions = ["Shows Since Played", "Song Age", "Likes", "Length vs Typical", "None"];
