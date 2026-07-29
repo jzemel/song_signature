@@ -77,6 +77,10 @@ export const COLOR_MODE_STYLES = {
         highlight: "#00d4ff",  // Bright cyan (outside Oranges gradient)
         selected: "#0099ff"    // Vivid blue
     },
+    "Song Age (as of show)": {
+        highlight: "#00d4ff",  // Matches Song Age (same Oranges scheme)
+        selected: "#0099ff"
+    },
     "Likes": {
         highlight: "#F39C6B",  // Tangerine dream (outside Purples gradient)
         selected: "#DD8E61"    // Toasted almond (alt: FFF05A, 482728)
@@ -111,6 +115,8 @@ export const SHOWS_SINCE_PLAYED_DOMAIN_MIN = -20;
 export const SHOWS_SINCE_PLAYED_DOMAIN_MAX = 80;
 export const SONG_AGE_DOMAIN_MIN = 0;
 export const SONG_AGE_DOMAIN_MAX = 20;
+export const SONG_AGE_COLOR_FLOOR = 0.18; // Start the Oranges ramp here (not pure white) so young songs are visible
+export const DEBUT_COLOR = "#C6E9B4"; // Light green for debut performances (song's first-ever play) — pops against the oranges
 export const LIKES_COUNT_DOMAIN_MIN = -25;
 export const LIKES_COUNT_DOMAIN_MAX = 55;
 export const COLOR_SCALE_UNKNOWN = "#e9ecef";
@@ -121,4 +127,4 @@ export const MS_PER_YEAR = 1000 * 60 * 60 * 24 * 365;
 export const LENGTH_VS_TYPICAL_DOMAIN_MIN = -2;
 export const LENGTH_VS_TYPICAL_DOMAIN_MAX = 6;
 
-export const colorOptions = ["Shows Since Played", "Song Age", "Likes", "Length vs Typical", "None"];
+export const colorOptions = ["Shows Since Played", "Song Age (as of show)", "Likes", "Length vs Typical", "None"];

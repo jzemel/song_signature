@@ -37,7 +37,7 @@ const colorShowsSincePlayed = d3.scaleSequential()
 
 const colorAge = d3.scaleSequential()
     .domain([C.SONG_AGE_DOMAIN_MIN, C.SONG_AGE_DOMAIN_MAX])
-    .interpolator(d3.interpolateOranges)
+    .interpolator(t => d3.interpolateOranges(C.SONG_AGE_COLOR_FLOOR + t * (1 - C.SONG_AGE_COLOR_FLOOR)))
     .unknown(C.COLOR_SCALE_UNKNOWN);
 
 const colorLikesCount = d3.scaleSequential()
@@ -103,6 +103,25 @@ function getSeasonInfo(datestr) {
 function calculateSongAge(track) {
     const ageMs = Date.now() - new Date(track.first_date_played);
     return ageMs / C.MS_PER_YEAR;
+}
+
+/**
+ * Calculate the age of a song at the time of this performance
+ * @param {Object} track - Track object with datestr and first_date_played
+ * @returns {number} Age in years as of the show date
+ */
+function calculateSongAgeAtShow(track) {
+    const ageMs = new Date(track.datestr) - new Date(track.first_date_played);
+    return ageMs / C.MS_PER_YEAR;
+}
+
+/**
+ * Whether this performance is the song's debut (first-ever play)
+ * @param {Object} track - Track object with datestr and first_date_played
+ * @returns {boolean}
+ */
+function isDebut(track) {
+    return track.datestr === track.first_date_played;
 }
 
 // ============================================================================
@@ -735,6 +754,11 @@ d3.select("#selectButton").on("change", function(d) {
         case "Song Age":
             colorFunction = function(track) {
                 return colorAge(calculateSongAge(track));
+            };
+            break;
+        case "Song Age (as of show)":
+            colorFunction = function(track) {
+                return isDebut(track) ? C.DEBUT_COLOR : colorAge(calculateSongAgeAtShow(track));
             };
             break;
         case "Likes":
